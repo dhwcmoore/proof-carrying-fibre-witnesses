@@ -1,0 +1,23 @@
+--- THREAT_MODEL.md	2026-09-04 03:55:37.350199518 -0600
++++ phase0_closure_package_r1/revised/THREAT_MODEL.md	2026-09-05 18:49:31.265490110 -0600
+@@ -1,7 +1,11 @@
+ # Threat Model
+ 
+ **Deliverable:** Phase 0, Unit 0F (with `NON_CLAIMS.md`)
+-**Status:** Draft for Unit 0G ratification. **Revision 14** — `validate_campaign`
++**Status:** Draft for Unit 0G ratification. **Revision 15** — adds T30
++(context-bundle / stage-1 inconsistency), mitigated by the new
++`InconsistentContextBundle` obstruction; see
++`phase0_closure_package_r1/CONTEXT_BUNDLE_AMENDMENT.md`. Revision 14 —
++`validate_campaign`
+ runs before any model call; the gated capture charges every fuel unit before its work and bounds the runner calls, so a hostile campaign consumes no model time
+ before authentication. O6 checks each transcript event's input equals
+ `preproc ctx x/y` (`ExecInputMismatch`). Manifest tampering → typed
+@@ -48,6 +52,7 @@
+ | T27 | **Execution-resource abuse before authentication** — a hostile party submits a huge or unauthenticated campaign to make the verifier run the model | `validate_campaign` (once per pipeline; **charges each fuel phase before its work**) runs **before any model call**; the **gated capture** (`VERDICT_SEMANTICS.md` §6.4) then `charge`s each `stage1_check` / `preflight` / probe / candidate batch *before* doing it and stops at the first `` `Over ``; `\|subs\| > max_candidates` short-circuits to all-`` `NotRun ``; `parse_transcript` is bounded by `bundle_limits.max_transcript_bytes` | no model call on an `` `Invalid `` campaign; `OBSTRUCTED` (`RecordIntegrity …` / `TranscriptMalformed` / `CampaignCandidateCountExceeded` / `CampaignFuelExhausted`) |
+ | T28 | **Context bypass** — a hostile offline transcript carries stage-2 candidate events even though O1/O2/O3 would fail, hoping the verifier accepts a witness without a resolved context | The gated capture issues **no** candidate `call_request` before `eval_O3 lc = `Ok rc`; `replay` runs the same `charge`/gate sequence over the same `context_bundle` and marks every pending stage-2 slot `` `NotRun `` on any context failure, so a `` `Done `` `` `ValidWitness `` slot cannot exist without `ContextResolved` — `(REP1)`, `VERDICT_SEMANTICS.md` §6.6 | `OBSTRUCTED` / `clo = ContextObstruction …`; stray candidate events ignored |
+ | T29 | **Detached malformed transcript** — an obstruction certificate for `TranscriptMalformed` is presented next to a different malformed input | `parse_transcript` always computes `wire_digest := digest_bytes_v1("pcfw.exec_transcript_wire.v1", <raw bytes>)`; the certificate's `transcript_evidence = MalformedTranscript {reason ; wire_digest}` binds the exact bytes that failed to parse (`VERDICT_SEMANTICS.md` §3.1, §9) | re-checkable by recomputing `wire_digest` over the presented bytes |
++| T30 | **Context-bundle / stage-1 inconsistency** — an offline package (or a tampered live one) pairs `ctx_not_needed` with a campaign whose stage 1 completes with `Pending` candidates, hoping `replay` proceeds without a resolved context or emits a misleading O1/O2/O3 finding | `replay` is total over an arbitrary `context_bundle` (`VERDICT_SEMANTICS.md` §6.6); this pairing is not a `capture` output and is reported as its own case — `context = ContextBundleInconsistent`, `clo = InconsistentContextBundle`, every pending stage-2 slot `` `NotRun ``, **no finding fabricated** (`ctx_reason` is not widened, so `CtxUnavailable` / `PreflightFail` cannot carry it). Offline reconstruction derives the bundle via `load_context` and never selects `CtxNotNeeded` for such a campaign. `(T2)` unaffected — no `` `ValidWitness `` can arise | `OBSTRUCTED` / `clo = InconsistentContextBundle`, obligation `reconstruct_or_supply_context_bundle` |
+ 
+ ## 2. Minimum mitigations (summary)
+ 

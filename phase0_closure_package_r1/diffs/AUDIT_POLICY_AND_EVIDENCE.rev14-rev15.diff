@@ -1,0 +1,44 @@
+--- AUDIT_POLICY_AND_EVIDENCE.md	2026-09-04 03:54:10.103722695 -0600
++++ phase0_closure_package_r1/revised/AUDIT_POLICY_AND_EVIDENCE.md	2026-09-05 18:49:08.686769380 -0600
+@@ -1,7 +1,12 @@
+ # Audit Policy and Evidence Obligations
+ 
+ **Deliverable:** Phase 0, Unit 0E
+-**Status:** Draft for Unit 0G ratification. **Revision 14** — `assessment_outcome`
++**Status:** Draft for Unit 0G ratification. **Revision 15** — §2.2 gains encodings
++for the new `campaign_obstruction` `"inconsistent_context_bundle"` and
++`context_state` `"context_bundle_inconsistent"` (both nullary, the standard
++constructor rule; `ctx_reason` unchanged). See
++`phase0_closure_package_r1/CONTEXT_BUNDLE_AMENDMENT.md`. Revision 14 —
++`assessment_outcome`
+ carries a `certificate` in every non-`Underdetermined` constructor. An explicit
+ immutable `loaded_context` (one F.3 `load_context`) is threaded through capture /
+ replay, so `preflight_O1_O2` / `eval_O3` / `resolved_context` are constructible.
+@@ -167,12 +172,12 @@
+ | `validation_result` | `{"k":"invalid","v":{reason:<integrity_reason>, fuel:<fuel_ledger>, evidence:<commitment_evidence>}}` / `{"k":"fuel_obstructed","v":{fuel:<fuel_ledger>, evidence:<commitment_evidence>}}` / `{"k":"valid","v":{fuel:<fuel_ledger>}}` (the `authenticated_campaign` payload holds functions — bound by `M`/`mc` digests, not serialised) |
+ | `transcript_evidence` | `"no_transcript"` / `{"k":"malformed_transcript","v":{reason:<string>, wire_digest:<digest>}}` / `{"k":"live_capture","v":{transcript_digest:<digest string>}}` / `{"k":"offline_transcript","v":{transcript_digest:<digest string>, wire_digest:<digest string>}}` — `transcript_digest = digest_v1("pcfw.exec_transcript.v1", to_cv(tr))` |
+ | `assessment_outcome` | `{"k":"inadmissible"\|"exact"\|"obstructed","v":<certificate>}` / `{"k":"underdetermined","v":<campaign_report>}` |
+-| `context_state` | `"no_context_needed"` / `{"k":"context_unresolved","v":{reason:<ctx_reason>, findings:[<finding>…]}}` / `{"k":"context_resolved","v":{context_digests:<context_descriptor>, findings:[<finding>…]}}` — `resolved_context` is represented by its `context_descriptor` |
++| `context_state` | `"no_context_needed"` / `{"k":"context_unresolved","v":{reason:<ctx_reason>, findings:[<finding>…]}}` / `{"k":"context_resolved","v":{context_digests:<context_descriptor>, findings:[<finding>…]}}` / `"context_bundle_inconsistent"` — `resolved_context` is represented by its `context_descriptor` |
+ | `pending_submission` | `{submission_index:<int>, submission_digest, semantic_candidate_digest, candidate:<parsed_candidate>, stage1_findings:[<finding>…]}` |
+ | `stage1_slot` / `stage2_slot` | `{submission_index:<int>, result:<"not_run" \| {"k":"done","v":<stage1_result \| stage2_result>}>}` |
+ | `fuel_ledger` | `{budget:<int>, consumed:<int>}` |
+ | `integrity_reason` | constructor rule: `{"k":"bad_commitment_encoding","v":<string>}` / `"signer_not_authorised"` / `"signature_invalid"` / `"manifest_policy_mismatch"` / `"manifest_audit_instance_mismatch"` / `"manifest_context_mismatch"` / `{"k":"ledger_mismatch","v":{index:<int>}}` / `{"k":"record_identity_mismatch","v":{field:<string>}}` / `"completeness_malformed"` |
+-| `campaign_obstruction` | `{"k":"record_integrity","v":<integrity_reason>}` / `"validation_fuel_exhausted"` / `{"k":"transcript_malformed","v":{reason:<string>, wire_digest:<digest>}}` / `{"k":"context_obstruction","v":<ctx_reason>}` / `"campaign_fuel_exhausted"` / `"campaign_candidate_count_exceeded"` / `{"k":"witness_obstruction","v":{primary_index:<int>, primary_reason:<o_reason>, other_indices:[<int>…]}}` |
++| `campaign_obstruction` | `{"k":"record_integrity","v":<integrity_reason>}` / `"validation_fuel_exhausted"` / `{"k":"transcript_malformed","v":{reason:<string>, wire_digest:<digest>}}` / `{"k":"context_obstruction","v":<ctx_reason>}` / `"campaign_fuel_exhausted"` / `"campaign_candidate_count_exceeded"` / `"inconsistent_context_bundle"` / `{"k":"witness_obstruction","v":{primary_index:<int>, primary_reason:<o_reason>, other_indices:[<int>…]}}` |
+ | `commitment_evidence` | `{"k":"unparsed_commitment","v":<manifest_commitment_wire>}` / `{"k":"parsed_commitment","v":<digest string>}` / `{"k":"authenticated_commitment","v":<digest string>}` |
+ | `replay_input` | `{"k":"invalid_fuel","v":<fuel_ledger>}` / `{"k":"replay_done","v":<replay_result>}` — what `build_certificate` receives |
+ | `campaign_record_summary` | `{campaign_id, audit_instance_id, policy_hash, manifest_digest, completeness:<completeness_status>}` |
+@@ -643,6 +648,12 @@
+ LOAD CONTEXT  — load_context env (context_descriptor ac)   (F.3 fetch, once).
+   `Unavailable rn ⇒ ContextUnresolved rn ; every pending slot `NotRun ; NO probe, NO candidate calls.
+   `Loaded lc ⇒ continue.
++  [replay only] the supplied context_bundle stands in for load_context's result:
++    CtxUnavailable rn ⇒ as `Unavailable rn above.
++    CtxNotNeeded WITH pending ≠ [] ⇒ context = ContextBundleInconsistent ;
++      clo = InconsistentContextBundle ; every pending slot `NotRun ; NO further calls ;
++      no finding (not a `capture` output — VERDICT_SEMANTICS.md §6.5).
++    CtxLoaded lc ⇒ continue.
+ 
+ PREFLIGHT  — charge L preflight_fuel  ⇒  `Over ⇒ clo = CampaignFuelExhausted ; NO probe, NO candidate calls.
+   preflight_O1_O2(lc)   — pure, NO runner call:

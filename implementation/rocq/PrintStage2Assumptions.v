@@ -1,0 +1,119 @@
+From PCFW Require Import Stage1 Stage1Invariant Stage1Wrapper ContextResolution PipelineWiring ValidationBinding ManifestMatching CanonicalV1 ManifestAuthentication ManifestLedger ManifestAudit CampaignRecord ManifestPipeline Stage2 Stage2Adapter.
+
+(* stage-1 semantic checker -> adapter hypotheses *)
+Print Assumptions Stage1.stage1_pending_identity.
+Print Assumptions Stage1.stage1_pending_candidate_wf.
+Print Assumptions Stage1.stage1_pending_evidence.
+Print Assumptions Stage1.stage1_reject_char.
+Print Assumptions Stage1.stage1_dim_reject.
+
+(* evidence preservation through orchestration *)
+Print Assumptions Stage1Invariant.stage1_pending_invariant.
+Print Assumptions Stage1Invariant.run_stage1_all_pending_invariant.
+Print Assumptions Stage1Invariant.run_stage1_stage2_list_invariant.
+Print Assumptions Stage1Invariant.replay_op_stage2_local.
+Print Assumptions Stage1Invariant.adapter_c_recheck_redundant.
+
+(* F.3 stage-1 parser wrapper *)
+Print Assumptions Stage1Wrapper.wire_parse_B4_before_B5.
+Print Assumptions Stage1Wrapper.wrapper_reject_not_pending.
+Print Assumptions Stage1Wrapper.wrapper_pending_binds.
+Print Assumptions Stage1Wrapper.wrapper_fields.
+Print Assumptions Stage1Wrapper.wrapper_op_stage1_sound.
+
+(* concrete O1/O2/O3 context resolution *)
+Print Assumptions ContextResolution.preflight_ok_binds.
+Print Assumptions ContextResolution.eval_o3_ok_binds.
+Print Assumptions ContextResolution.preflight_ok_artifact_bound.
+Print Assumptions ContextResolution.resolve_some_is_committed.
+Print Assumptions ContextResolution.stage1_stage2_use_resolved_context.
+
+(* pipeline wiring: one C across stage 1 / preflight / O3 / stage 2 *)
+Print Assumptions PipelineWiring.wired_ops_op_stage1_sound.
+Print Assumptions PipelineWiring.wired_ops_stage2_index_contract.
+Print Assumptions PipelineWiring.wiring_resolution_consistent.
+Print Assumptions PipelineWiring.wired_run_stage1_pending_invariant.
+Print Assumptions PipelineWiring.wired_c_recheck_redundant.
+
+(* validate_campaign -> committed policy + descriptor -> replay *)
+Print Assumptions ValidationBinding.validate_campaign_binds.
+Print Assumptions ValidationBinding.assess_validated_live_uses_committed_policy.
+Print Assumptions ValidationBinding.assess_validated_offline_uses_committed_policy.
+
+(* concrete manifest matchers REPLACE the two ValidationBinding contracts:
+   the capstone + concrete replay corollaries prove the same conclusions
+   directly, bypassing the abstract policy_match_sound / context_match_sound *)
+Print Assumptions ManifestMatching.descriptor_eqb_true.
+Print Assumptions ManifestMatching.manifest_policy_matches_impl_sound.
+Print Assumptions ManifestMatching.manifest_context_matches_impl_sound.
+Print Assumptions ManifestMatching.validate_campaign_concrete_binds_policy.
+Print Assumptions ManifestMatching.validate_campaign_concrete_binds.
+Print Assumptions ManifestMatching.assess_validated_live_concrete.
+Print Assumptions ManifestMatching.assess_validated_offline_concrete.
+Print Assumptions ManifestMatching.manifest_matching_core_hyps_consistent.
+
+(* concrete 2.4.1 authenticated-manifest validation *)
+Print Assumptions CanonicalV1.render_manifest_frozen_vector.
+Print Assumptions CanonicalV1.esc_str_vector.
+Print Assumptions ManifestAuthentication.parse_commitment_impl_sound.
+Print Assumptions ManifestAuthentication.parse_commitment_impl_reject_not_parsed.
+Print Assumptions ManifestAuthentication.parse_manifest_impl_schema_valid_vector.
+Print Assumptions ManifestAuthentication.parse_manifest_impl_rejects_short_digests.
+Print Assumptions ManifestAuthentication.esc_decode_quote.
+Print Assumptions ManifestAuthentication.esc_decode_u001f.
+Print Assumptions ManifestAuthentication.esc_reject_u0061.
+Print Assumptions ManifestAuthentication.esc_reject_u0008.
+Print Assumptions ManifestAuthentication.esc_reject_raw_nonascii.
+Print Assumptions ManifestAuthentication.parse_manifest_impl_roundtrip.
+Print Assumptions ManifestAuthentication.parse_manifest_impl_wf.
+Print Assumptions ManifestAuthentication.signature_valid_impl_sound.
+Print Assumptions ManifestAuthentication.auth_from_ops.
+Print Assumptions ManifestAuthentication.validate_campaign_authenticates.
+Print Assumptions ManifestAuthentication.validate_campaign_authenticates_ops.
+Print Assumptions ManifestPipeline.validate_campaign_pipeline.
+
+(* concrete op_ledger_mismatch: least-index / length-divergence, None iff equal *)
+Print Assumptions ManifestLedger.ld_mismatch_none_iff.
+Print Assumptions ManifestLedger.ld_mismatch_some_spec.
+Print Assumptions ManifestLedger.ledger_mismatch_impl_none_iff.
+Print Assumptions ManifestLedger.ledger_mismatch_impl_some_spec.
+Print Assumptions ValidationBinding.validate_campaign_valid_ledger.
+Print Assumptions ManifestPipeline.validate_campaign_ledger_agrees.
+
+(* concrete op_manifest_audit_matches (step 5): full true equivalence, wired *)
+Print Assumptions ManifestAudit.manifest_audit_matches_impl_true_iff.
+Print Assumptions ManifestAudit.manifest_audit_matches_impl_false_iff.
+Print Assumptions ValidationBinding.validate_campaign_valid_audit.
+Print Assumptions ManifestPipeline.validate_campaign_audit_agrees.
+
+(* structured campaign-record view + decoder, concrete op_record_identity_mismatch
+   (step 8) over the five identity fields *)
+Print Assumptions CampaignRecord.parse_record_impl_schema_valid_vector.
+Print Assumptions CampaignRecord.parse_record_impl_full_record_vector.
+Print Assumptions CampaignRecord.parse_record_impl_rejects_empty_object.
+Print Assumptions CampaignRecord.parse_record_impl_rejects_identity_only.
+Print Assumptions CampaignRecord.parse_record_impl_accepts_canonical_budget.
+Print Assumptions CampaignRecord.parse_record_impl_rejects_leading_zero.
+Print Assumptions CampaignRecord.parse_record_impl_rejects_neg_zero.
+Print Assumptions CampaignRecord.parse_record_impl_rejects_dup_key.
+Print Assumptions CampaignRecord.parse_record_impl_rejects_descending_keys.
+Print Assumptions CampaignRecord.record_sentinels_distinct.
+Print Assumptions CampaignRecord.record_identity_mismatch_impl_none_iff.
+Print Assumptions CampaignRecord.record_identity_mismatch_impl_some_campaign_id.
+Print Assumptions CampaignRecord.record_identity_mismatch_impl_some_audit_instance_id.
+Print Assumptions CampaignRecord.record_identity_mismatch_impl_some_policy_hash.
+Print Assumptions CampaignRecord.record_identity_mismatch_impl_some_context_digests.
+Print Assumptions CampaignRecord.record_identity_mismatch_impl_some_manifest_digest.
+Print Assumptions CampaignRecord.record_identity_mismatch_impl_record_undecodable_iff.
+Print Assumptions CampaignRecord.record_identity_mismatch_impl_manifest_undecodable_iff.
+Print Assumptions ValidationBinding.validate_campaign_valid_record.
+Print Assumptions ManifestPipeline.validate_campaign_record_agrees.
+
+(* The kernel connection: each must print "Closed under the global context". *)
+Print Assumptions Stage2.stage2_valid_checked_witness.
+Print Assumptions Stage2.stage2_valid_observation_binding.
+Print Assumptions Stage2.stage2_check_missing_char.
+Print Assumptions Stage2Adapter.adapter_satisfies_index_contract.
+Print Assumptions Stage2Adapter.adapter_valid_supplies_checked_witness.
+Print Assumptions Stage2Adapter.adapter_valid_observation_binding.
+Print Assumptions Stage2Adapter.adapter_reporting_conformance.

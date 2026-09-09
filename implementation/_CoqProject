@@ -1,0 +1,22 @@
+-Q rocq PCFW
+rocq/FibreWitnessKernel.v
+rocq/ExtractFibreWitnessKernel.v
+rocq/Orchestration.v
+rocq/ExtractOrchestration.v
+rocq/CanonicalV1.v
+rocq/Stage2.v
+rocq/Stage2Adapter.v
+rocq/Stage1.v
+rocq/Stage1Invariant.v
+rocq/Stage1Wrapper.v
+rocq/ContextResolution.v
+rocq/PipelineWiring.v
+rocq/ValidationBinding.v
+rocq/ManifestMatching.v
+rocq/ManifestAuthentication.v
+rocq/ManifestLedger.v
+rocq/ManifestAudit.v
+rocq/CampaignRecord.v
+rocq/ManifestPipeline.v
+rocq/ExtractStage2.v
+rocq/ExtractManifestAuthentication.v

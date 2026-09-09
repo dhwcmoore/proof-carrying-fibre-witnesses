@@ -1,0 +1,101 @@
+--- VERDICT_SEMANTICS.md	2026-09-04 03:48:27.707663708 -0600
++++ phase0_closure_package_r1/revised/VERDICT_SEMANTICS.md	2026-09-05 18:48:28.682307317 -0600
+@@ -1,7 +1,14 @@
+ # Verdict Semantics
+ 
+ **Deliverable:** Phase 0, Unit 0D
+-**Status:** Draft for Unit 0G ratification. **Revision 14** — `assessment_outcome`
++**Status:** Draft for Unit 0G ratification. **Revision 15** — adds the
++`InconsistentContextBundle` campaign obstruction and the `ContextBundleInconsistent`
++context state for the one bundle/stage-1 pairing a total `replay` must handle but
++`capture` never produces (`CtxNotNeeded` supplied with a completed stage 1 that
++yielded `Pending` candidates); `ctx_reason` is unchanged. §6.4's `CtxNotNeeded`
++description is corrected (it also legitimately arises on terminal stage-1 fuel
++exhaustion). Full rationale: `phase0_closure_package_r1/CONTEXT_BUNDLE_AMENDMENT.md`.
++Revision 14 — `assessment_outcome`
+ carries a `certificate` in **every** constructor. `loaded_context` is an explicit
+ immutable value produced by one F.3 `load_context` and threaded, as data, through
+ `capture` / `replay` / `assess_validated` (so `preflight_O1_O2` / `eval_O3` /
+@@ -43,7 +50,9 @@
+   | InputsEqual | XNotInDomain | YNotInDomain
+   | QuantisedObservationsDiffer | TargetsAgree
+ 
+-type ctx_reason =                  (* O1–O3, once *)
++type ctx_reason =                  (* O1–O3, once — the resolution-outcome type;
++                                     shared by CtxUnavailable / preflight_O1_O2 /
++                                     eval_O3, so it takes no other constructor *)
+   | ArtifactMismatch | SpecMismatch | RepNotReproduced
+ 
+ type o_reason =                    (* stage 2, per candidate *)
+@@ -65,9 +74,14 @@
+   | RecordIntegrity      of integrity_reason
+   | ValidationFuelExhausted                        (* validate_campaign ran out — §5; unreachable for a loaded config *)
+   | TranscriptMalformed  of { reason : string ; wire_digest : digest }
+-  | ContextObstruction   of ctx_reason
++  | ContextObstruction   of ctx_reason         (* genuine O1/O2/O3 failure, once *)
+   | CampaignFuelExhausted
+   | CampaignCandidateCountExceeded
++  | InconsistentContextBundle                   (* nullary; cb = CtxNotNeeded with a
++                                                   completed stage 1 that produced
++                                                   Pending candidates — not
++                                                   producible by `capture`; no
++                                                   O1/O2/O3 check ran *)
+   | WitnessObstruction   of { primary_index : nat ; primary_reason : o_reason ; other_indices : nat list }
+ 
+ type check_outcome = [ `Pass | `Fail | `NotEvaluated ]
+@@ -280,7 +294,15 @@
+      `Unavailable ArtifactMismatch` if a byte-string is missing. F.3; runs once. *)
+ 
+ type context_bundle :=
+-  | CtxNotNeeded                              (* no submission reached `Pending *)
++  | CtxNotNeeded                              (* `capture` issued no `load_context`:
++                                                either stage 1 produced no `Pending
++                                                candidate, or stage 1 did not
++                                                complete (terminal fuel `Over — an
++                                                earlier submission may already be
++                                                `Pending).  `replay` with this
++                                                bundle AND a completed stage 1 that
++                                                did produce `Pending candidates is
++                                                not a `capture` output: see §6.5. *)
+   | CtxUnavailable of ctx_reason              (* load_context failed *)
+   | CtxLoaded      of loaded_context
+ 
+@@ -388,6 +410,7 @@
+ | `\|subs\| > max_candidates` | all `` `NotRun `` | `NoContextNeeded` | — | `CampaignCandidateCountExceeded` |
+ | stage-1 `charge` `` `Over `` at `j` | `` `Done `` for `< j`, `` `NotRun `` for `≥ j` | `NoContextNeeded` | `` `NotRun `` | `CampaignFuelExhausted` |
+ | `pending = []` | all `` `Done `` | `NoContextNeeded` | — | `None` |
++| `pending ≠ []` ∧ `cb = CtxNotNeeded` (stage 1 completed) | all `` `Done `` | `ContextBundleInconsistent` | `` `NotRun `` | `InconsistentContextBundle` |
+ | `cb = CtxUnavailable rn` | all `` `Done `` | `ContextUnresolved {rn ; O1_fail}` | `` `NotRun `` | `ContextObstruction rn` |
+ | preflight `charge` `` `Over `` | all `` `Done `` | `NoContextNeeded` | `` `NotRun `` | `CampaignFuelExhausted` |
+ | `preflight_O1_O2 = ` `Fail (rn,f)`` | all `` `Done `` | `ContextUnresolved {rn ; f}` | `` `NotRun `` | `ContextObstruction rn` |
+@@ -424,6 +447,8 @@
+       | NoContextNeeded
+       | ContextUnresolved of { reason : ctx_reason ; findings : finding list }
+       | ContextResolved   of { context : resolved_context ; findings : finding list }
++      | ContextBundleInconsistent   (* nullary — no reason, no findings; §6.5 row
++                                       `pending ≠ [] ∧ cb = CtxNotNeeded` *)
+ 
+     resolved_context := { policy : Policy ; ctx : AuditContext policy ; descriptor : context_descriptor }
+ 
+@@ -484,6 +509,12 @@
+ `` `ValidWitness `` **>** `rr.clo` **>** all-checked-obstructed **>** `EXACT`
+ (dead code, §6.9) **>** `UNDERDETERMINED`.
+ 
++`rr.clo = Some InconsistentContextBundle` (the §6.5 row `pending ≠ [] ∧ cb =
++CtxNotNeeded`) takes `failed_obligation = "reconstruct_or_supply_context_bundle"`
++and `context_findings = []`. It cannot dominate a within-budget `` `ValidWitness ``
++because that pairing makes every pending stage-2 slot `` `NotRun `` (no witness can
++exist), so the precedence is not observably affected.
++
+ ### 6.8 Two entry points, `validate_campaign` once each
+ 
+ - **Live** (`AUDIT_POLICY_AND_EVIDENCE.md` §2.4 step 7):
+@@ -516,7 +547,7 @@
+ | `INADMISSIBLE` | `¬ FibreConstant(rc.ctx)` on `D_P` via `(A1)` — `rc.ctx = r.context.ctx` for `rr.context = ContextResolved r`, `= cb.lc.ctx` — from a within-budget stage-2 `` `ValidWitness `` under a `` `Valid `` campaign, **conditional on the listed F.3 assumptions**: `faithful_transcript tr rc.ctx` (O6 gives input-correctness + success; O4 guards non-repeatable unfaithfulness; §3.2), and the `loaded_context` well-formedness (`cb.lc.ctx` faithfully realises the committed spec bytes; F.3, §6.3). `(REP1)` holds for **every** certificate (a `` `Done `` slot required an open gate after `ContextResolved`); `(CAP1)` holds **only** when `transcript_evidence = LiveCapture` (the transcript and `context_bundle` are an unmodified `capture` output). |
+ | `EXACT` | `FibreConstant(rc.ctx)` via `(E1)`. **Unreachable in v0** (§6.9). |
+ | `UNDERDETERMINED` | "well-formed transcript, `` `Valid `` campaign, no within-budget stage-2 `` `ValidWitness ``, `rr.clo = None`, no all-obstructed, `completeness` did not yield `EXACT`." Nothing about `FibreConstant`. |
+-| `OBSTRUCTED` | `validate_campaign` returned `` `Invalid `` (`RecordIntegrity`) or `` `FuelObstructed ``, **or** `parse_transcript` returned `` `Malformed `` (`TranscriptMalformed`), **or** `rr.clo ≠ None`, **or** every checked candidate was `` `WITNESS_CHECK_OBSTRUCTED ``. The certificate names one deterministic primary cause, the repair obligation, the O1–O3 `context_findings`, and the matching `commitment_evidence` / `transcript_evidence`. |
++| `OBSTRUCTED` | `validate_campaign` returned `` `Invalid `` (`RecordIntegrity`) or `` `FuelObstructed ``, **or** `parse_transcript` returned `` `Malformed `` (`TranscriptMalformed`), **or** `rr.clo ≠ None` (including `InconsistentContextBundle` — `cb = CtxNotNeeded` with a completed stage 1 that produced `Pending` candidates; obligation `reconstruct_or_supply_context_bundle`; `context = ContextBundleInconsistent`, every pending stage-2 slot `` `NotRun ``, no finding; `(T2)` unaffected since no `` `ValidWitness `` can arise), **or** every checked candidate was `` `WITNESS_CHECK_OBSTRUCTED ``. The certificate names one deterministic primary cause, the repair obligation, the O1–O3 `context_findings`, and the matching `commitment_evidence` / `transcript_evidence`. |
+ 
+ ## 7. Kernel versus campaign — `(T2)`
+ 

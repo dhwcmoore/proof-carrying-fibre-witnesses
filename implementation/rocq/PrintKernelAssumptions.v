@@ -1,0 +1,5 @@
+From PCFW Require Import FibreWitnessKernel.
+
+Print Assumptions T1_checked_witness_refutes_fibre_constancy.
+Print Assumptions A1_bound_witness_refutes_context_fibre_constancy.
+
