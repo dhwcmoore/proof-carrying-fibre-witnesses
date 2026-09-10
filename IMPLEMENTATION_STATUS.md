@@ -321,7 +321,15 @@ Distinct decoder-failure sentinels `"!record_undecodable"` / `"!manifest_undecod
 Per-field `_some_<field>` lemmas (preceding fields agree, named field differs).
 Standalone `validate_campaign_valid_record`; wired into `pipeline_ops`; separate
 `validate_campaign_record_agrees`; `validate_campaign_pipeline` unchanged. Bounded to
-the five identity fields -- `op_record_crosscheck` still needs `recorded_results`.
+the five identity fields -- `op_record_crosscheck` needs a full typed
+representation + semantic decoder for `recorded_results` **and** `resource_budget`.
+
+**Promotion (2026-09-10).** The cumulative **r5–r13 validation block**
+(`ManifestAuthentication` / `ManifestMatching` / `ManifestLedger` / `ManifestAudit`
+/ `CampaignRecord` + the `ManifestPipeline` integration) is **reviewer-concurred
+by source inspection and promoted** (reviewer disposition on r13; reviewed r13
+bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`).
+Not a Phase 1 closure.
 
 Across `make check`, **101** `Print Assumptions` "Closed under the global
 context"; `coqchk` covers 17 modules; seven `make test` harnesses PASS.

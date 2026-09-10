@@ -128,5 +128,4 @@ is now concrete -- `CampaignRecord`, `PHASE_1_CAMPAIGN_RECORD.md`.)
 `PCFW.ManifestAudit`, `PCFW.CampaignRecord`); across `make check`, **101** `Print
 Assumptions` "Closed under the global context"; **seven** `make test` harnesses PASS.
 
-Phase 1 remains **open**; Phase 2 is not authorised; this is an author-reported
-unit for review, not a promotion.
+Phase 1 remains **open**; Phase 2 is not authorised. **Reviewer-concurred by source inspection and promoted** as part of the cumulative r5–r13 validation block (reviewer disposition on r13; the reviewed r13 bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`). Not a Phase 1 closure.

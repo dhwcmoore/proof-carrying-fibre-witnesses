@@ -40,9 +40,10 @@ manifest_digest, policy_hash, recorded_results, resource_budget
 -- extracting the five identity fields.  `completeness`, `recorded_results` and
 `resource_budget` are **syntactically consumed** by `skip_value` (string /
 integer / boolean / null / array / object, fuel-bounded), **not** interpreted.
-Cross-checking `recorded_results` is a later `op_record_crosscheck` unit; that
-needs those fields represented, not just skipped -- **this unit does not by
-itself unlock `op_record_crosscheck`**.
+Cross-checking `recorded_results` / `resource_budget` is a later
+`op_record_crosscheck` unit; that needs a **full typed record representation and
+semantic decoder** for those fields, not just `skip_value` -- **this unit does
+not by itself unlock `op_record_crosscheck`**.
 
 **`skip_value` enforces the canonical form**, it does not merely tolerate JSON:
 integers are exactly `0 | -?[1-9][0-9]*` (no leading zero, no `-0`); every
@@ -180,13 +181,14 @@ representation), now concrete standalone AND integrated** (`pipeline_ops`),
 bounded to the five step-8 identity fields.  Residual: the two decoders passed in
 (both concrete) and, downstream, retrieval integrity.
 
-Still OPEN: `op_completeness_wellformed`, `op_record_crosscheck` (needs
-`recorded_results` represented -- a follow-on to this unit),
+Still OPEN: `op_completeness_wellformed`, `op_record_crosscheck` (needs a full
+typed representation + semantic decoder for `recorded_results` **and**
+`resource_budget` -- the frozen `op_record_crosscheck` is both the
+recorded-result comparison and `crosscheck_budget`; a follow-on to this unit),
 `op_transcript_digest`.
 
 `make check` exits 0: `coqchk` covers **17** modules (adds `PCFW.CampaignRecord`);
 across `make check`, **101** `Print Assumptions` "Closed under the global context";
 **seven** `make test` harnesses PASS.
 
-Phase 1 remains **open**; Phase 2 is not authorised; this is an author-reported
-unit for review, not a promotion or Phase 1 closure.
+Phase 1 remains **open**; Phase 2 is not authorised. **Reviewer-concurred by source inspection and promoted** as part of the cumulative r5–r13 validation block (reviewer disposition on r13; the reviewed r13 bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`). Not a Phase 1 closure.

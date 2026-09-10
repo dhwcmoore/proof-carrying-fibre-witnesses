@@ -205,4 +205,4 @@ units -- `PHASE_1_MANIFEST_LEDGER.md`, `PHASE_1_MANIFEST_AUDIT.md`,
 `parse_manifest_impl_wf` proves every accepted manifest is
 `CanonicalV1.manifest_wellformed`.
 
-Phase 1 remains **open**; Phase 2 not authorised; author-reported for review.
+Phase 1 remains **open**; Phase 2 is not authorised. **Reviewer-concurred by source inspection and promoted** as part of the cumulative r5–r13 validation block (reviewer disposition on r13; the reviewed r13 bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`). Not a Phase 1 closure.
