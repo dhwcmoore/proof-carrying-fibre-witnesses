@@ -473,6 +473,13 @@ let () =
        "\"outcome\":{\"k\":\"accepted\",\"v\":{\"k\":\"not_a_witness\",\"v\":\"inputs_equal\"}}," ^
        "\"submission_digest\":\"" ^ d64 'f' ^ "\",\"submission_index\":1}]," ^
     "\"resource_budget\":" ^ budget ^ "}" in
+  (* a record with a caller-supplied recorded_results array + budget *)
+  let mk_record ~rr ~budget =
+    "{\"audit_instance_id\":\"ai-0001\",\"campaign_id\":\"cmp-1\"," ^
+    "\"completeness\":\"unknown\"," ^ cds ^ "," ^
+    "\"manifest_digest\":\"" ^ good_digest ^ "\"," ^
+    "\"policy_hash\":\"" ^ d64 'd' ^ "\"," ^
+    "\"recorded_results\":" ^ rr ^ ",\"resource_budget\":" ^ budget ^ "}" in
   let fr = full_rec ~budget:"{\"max_candidates\":10,\"max_memory_bytes\":1048576}" in
   (* the five identity fields decode; the three skipped fields do not block it *)
   assert (A.parse_record_impl fr = Some rv_ok);
@@ -499,6 +506,192 @@ let () =
   assert (A.parse_record_impl (full_rec ~budget:"{\"max_candidates\":0}") = Some rv_ok); (* lone 0 ok *)
   assert (A.parse_record_impl (full_rec ~budget:"{\"max_candidates\":-7}") = Some rv_ok); (* -7 ok *)
 
+  (* ----- op_record_crosscheck: fully typed submission_check_result ----- *)
+  let fnd cid oc rsn off : A.finding =
+    { A.finding_check_id = cid; A.finding_outcome = oc;
+      A.finding_reason = rsn; A.finding_offending = off } in
+  (match A.parse_record_full_impl fr with
+   | None -> assert false
+   | Some rf ->
+       assert (rf.A.rf_identity = rv_ok);
+       assert (List.map (fun e -> e.A.scr_index) rf.A.rf_recorded = [0; 1]);
+       assert (List.map (fun e -> e.A.scr_digest) rf.A.rf_recorded = [d64 'e'; d64 'f']);
+       assert (List.map (fun e -> e.A.scr_candidate_id) rf.A.rf_recorded = [None; None]);
+       assert (List.map (fun e -> e.A.scr_outcome) rf.A.rf_recorded
+               = [A.ScrValidWitness; A.ScrNotAWitness A.InputsEqual]);
+       assert (List.map (fun e -> e.A.scr_findings) rf.A.rf_recorded
+               = [ []; [ fnd "C1" A.Fail (Some "inputs_equal") None ] ]);
+       assert (rf.A.rf_budget.A.rb_max_candidates = Some 10);
+       assert (A.parse_record_impl fr = Some rf.A.rf_identity));   (* forward projection *)
+  (* the typed finding decoder captures `offending` and enforces the check_id set *)
+  (match A.parse_record_full_impl
+     (mk_record
+        ~rr:("[{\"findings\":[{\"check_id\":\"C1\",\"offending\":[1,2]," ^
+              "\"outcome\":\"fail\",\"reason\":\"inputs_equal\"}]," ^
+              "\"outcome\":{\"k\":\"accepted\",\"v\":\"valid_witness\"}," ^
+              "\"submission_digest\":\"" ^ d64 'e' ^ "\",\"submission_index\":0}]")
+        ~budget:"{}") with
+   | Some rf -> assert (List.map (fun e -> e.A.scr_findings) rf.A.rf_recorded
+                        = [ [ fnd "C1" A.Fail (Some "inputs_equal") (Some "[1,2]") ] ])
+   | None -> assert false);
+  assert (A.parse_record_full_impl                                (* invalid check_id -> reject *)
+            (mk_record
+               ~rr:("[{\"findings\":[{\"check_id\":\"ZZ\",\"outcome\":\"pass\"}]," ^
+                     "\"outcome\":{\"k\":\"accepted\",\"v\":\"valid_witness\"}," ^
+                     "\"submission_digest\":\"" ^ d64 'e' ^ "\",\"submission_index\":0}]")
+               ~budget:"{}") = None);
+  assert (A.parse_scr_outcome "{\"k\":\"rejected\",\"v\":\"not_a_real_reason\"}" = None);
+  (* parse_budget_object canonicality *)
+  assert (A.parse_budget_object "{\"max_candidates\":10}" <> None);
+  assert (A.parse_budget_object "{}" <> None);
+  assert (A.parse_budget_object "{\"max_memory_bytes\":1,\"max_candidates\":2}" = None);
+  assert (A.parse_budget_object "{\"max_candidates\":01}" = None);
+  assert (A.parse_budget_object "{\"max_candidates\":1,\"max_candidates\":2}" = None);
+  assert (A.parse_budget_object "{\"max_wobble\":1}" = None);
+  (* crosscheck_budget_impl: rec.resource_budget is ADVISORY vs verifier_config *)
+  let cfg_mc n : A.verifier_config = { (cfg (ta [] [])) with A.max_candidates = n } in
+  let b0 = A.empty_budget in
+  assert (A.crosscheck_budget_impl { b0 with A.rb_max_candidates = Some 10 } (cfg_mc 10) = []);
+  assert (List.exists (fun f -> f.A.finding_outcome = A.Fail)
+            (A.crosscheck_budget_impl { b0 with A.rb_max_candidates = Some 5 } (cfg_mc 10)));
+  assert (List.for_all (fun f -> f.A.finding_outcome = A.NotEvaluated)
+            (A.crosscheck_budget_impl { b0 with A.rb_max_wall_clock_seconds = Some 3 } (cfg_mc 10)));
+  (* crosscheck_impl vs the replay-derived expectation -- crosscheck_impl_nil_iff *)
+  let rf_of rs : A.campaign_record_full_view =
+    { A.rf_identity = rv_ok; A.rf_recorded = rs; A.rf_budget = b0 } in
+  let mm l = List.exists (fun f -> f.A.finding_check_id = "campaign_record_mismatch") l in
+  let s1r i sd cid sem v fs : A.stage1_slot =
+    { A.stage1_slot_index = i;
+      A.stage1_slot_result = A.Done
+        { A.s1_index = i; A.s1_submission_digest = sd;
+          A.s1_candidate_id = cid; A.s1_semantic_digest = sem;
+          A.s1_verdict = v; A.s1_findings = fs } } in
+  let scr i sd cid sem oc fs : A.scr_view =
+    { A.scr_index = i; A.scr_digest = sd; A.scr_candidate_id = cid;
+      A.scr_semantic = sem; A.scr_outcome = oc; A.scr_findings = fs } in
+  (* --- REJECTED (not parsed): candidate_id / semantic = None; a B-finding with `offending` --- *)
+  let bf = fnd "B4" A.Fail (Some "input_structure_error") (Some "[3]") in
+  assert (A.crosscheck_impl
+            (rf_of [ scr 0 (d64 'e') None None (A.ScrRejected A.InputStructureError) [bf] ])
+            [ s1r 0 (d64 'e') None None (A.S1Rejected A.InputStructureError) [bf] ] [] = []);
+  assert (mm (A.crosscheck_impl                                          (* offending value mutated *)
+                (rf_of [ scr 0 (d64 'e') None None (A.ScrRejected A.InputStructureError)
+                           [ { bf with A.finding_offending = Some "[9]" } ] ])
+                [ s1r 0 (d64 'e') None None (A.S1Rejected A.InputStructureError) [bf] ] []));
+  assert (mm (A.crosscheck_impl                                          (* offending dropped *)
+                (rf_of [ scr 0 (d64 'e') None None (A.ScrRejected A.InputStructureError)
+                           [ { bf with A.finding_offending = None } ] ])
+                [ s1r 0 (d64 'e') None None (A.S1Rejected A.InputStructureError) [bf] ] []));
+  (* --- PARSED NOT-A-WITNESS: candidate_id / semantic digest are Some --- *)
+  let naw = A.S1NotAWitness A.InputsEqual in
+  assert (A.crosscheck_impl
+            (rf_of [ scr 0 (d64 'e') (Some "c-1") (Some (d64 'a')) (A.ScrNotAWitness A.InputsEqual) [] ])
+            [ s1r 0 (d64 'e') (Some "c-1") (Some (d64 'a')) naw [] ] [] = []);
+  assert (mm (A.crosscheck_impl                                          (* candidate_id mutated *)
+                (rf_of [ scr 0 (d64 'e') (Some "c-2") (Some (d64 'a')) (A.ScrNotAWitness A.InputsEqual) [] ])
+                [ s1r 0 (d64 'e') (Some "c-1") (Some (d64 'a')) naw [] ] []));
+  assert (mm (A.crosscheck_impl                                          (* semantic digest for a parsed non-witness mutated *)
+                (rf_of [ scr 0 (d64 'e') (Some "c-1") (Some (d64 'b')) (A.ScrNotAWitness A.InputsEqual) [] ])
+                [ s1r 0 (d64 'e') (Some "c-1") (Some (d64 'a')) naw [] ] []));
+  assert (mm (A.crosscheck_impl                                          (* semantic digest omitted *)
+                (rf_of [ scr 0 (d64 'e') (Some "c-1") None (A.ScrNotAWitness A.InputsEqual) [] ])
+                [ s1r 0 (d64 'e') (Some "c-1") (Some (d64 'a')) naw [] ] []));
+  (* --- isolated wrong submission_digest --- *)
+  assert (mm (A.crosscheck_impl
+                (rf_of [ scr 0 (d64 'x') None None (A.ScrRejected A.InputStructureError) [bf] ])
+                [ s1r 0 (d64 'e') None None (A.S1Rejected A.InputStructureError) [bf] ] []));
+  (* --- reorder / count / wrong outcome --- *)
+  assert (mm (A.crosscheck_impl
+                (rf_of [ scr 1 (d64 'e') None None (A.ScrRejected A.InvalidUtf8) [];
+                         scr 0 (d64 'f') None None (A.ScrRejected A.InvalidUtf8) [] ])
+                [ s1r 0 (d64 'e') None None (A.S1Rejected A.InvalidUtf8) [];
+                  s1r 1 (d64 'f') None None (A.S1Rejected A.InvalidUtf8) [] ] []));
+  assert (mm (A.crosscheck_impl (rf_of [])
+                [ s1r 0 (d64 'e') None None (A.S1Rejected A.InvalidUtf8) [] ] []));
+  (* --- stage-1 NotRun: NO submission_check_result is derived (filtered out); a
+         recorded claim for that slot is an extra entry -> mismatch --- *)
+  let s1nr i : A.stage1_slot = { A.stage1_slot_index = i; A.stage1_slot_result = A.NotRun } in
+  let s2nr i : A.stage2_slot = { A.stage2_slot_index = i; A.stage2_slot_result = A.NotRun } in
+  assert (A.derive_expected [ s1nr 0 ] [] = []);
+  assert (mm (A.crosscheck_impl
+                (rf_of [ scr 0 (d64 'e') None None A.ScrValidWitness [] ]) [ s1nr 0 ] []));
+  assert (A.crosscheck_impl (rf_of []) [ s1nr 0 ] [] = []);   (* no claim, no slot -> ok *)
+  (* --- VALID_WITNESS via stage 2 --- *)
+  let pc : A.parsed_candidate = { A.pc_candidate_id = "c-1"; A.candidate_x = []; A.candidate_y = [] } in
+  let s1pend i sd sem : A.stage1_slot =
+    s1r i sd (Some "c-1") (Some sem)
+      (A.S1Pending { A.pending_index = i; A.pending_submission_digest = sd;
+                     A.pending_semantic_digest = sem; A.pending_candidate = pc;
+                     A.pending_findings = [] }) [] in
+  let s2valid i sd sem : A.stage2_slot =
+    { A.stage2_slot_index = i;
+      A.stage2_slot_result = A.Done
+        { A.s2_index = i;
+          A.s2_verdict = A.ValidWitness
+            { A.witness_index = i; A.witness_submission_digest = sd;
+              A.witness_semantic_digest = sem; A.witness_x = []; A.witness_y = [];
+              A.witness_o_x = []; A.witness_o_y = []; A.witness_findings = [] };
+          A.s2_findings = [] } } in
+  assert (A.crosscheck_impl
+            (rf_of [ scr 0 (d64 'e') (Some "c-1") (Some (d64 'a')) A.ScrValidWitness [] ])
+            [ s1pend 0 (d64 'e') (d64 'a') ] [ s2valid 0 (d64 'e') (d64 'a') ] = []);
+  assert (mm (A.crosscheck_impl
+                (rf_of [ scr 0 (d64 'e') (Some "c-1") (Some (d64 'a'))
+                           (A.ScrNotAWitness A.InputsEqual) [] ])
+                [ s1pend 0 (d64 'e') (d64 'a') ] [ s2valid 0 (d64 'e') (d64 'a') ]));
+  (* --- S1Pending whose stage-2 slot is NotRun: also filtered out --- *)
+  assert (A.derive_expected [ s1pend 0 (d64 'e') (d64 'a') ] [ s2nr 0 ] = []);
+  assert (mm (A.crosscheck_impl
+                (rf_of [ scr 0 (d64 'e') (Some "c-1") (Some (d64 'a')) A.ScrValidWitness [] ])
+                [ s1pend 0 (d64 'e') (d64 'a') ] [ s2nr 0 ]));
+
+  (* ----- mutation tests THROUGH the decoder (parse_record_full_impl), not
+     hand-built views: positive, wrong submission_digest, wrong submission_index,
+     and NotRun alignment ----- *)
+  let rr_one ~sd ~si =
+    "[{\"candidate_id\":\"c-1\",\"findings\":[]," ^
+     "\"outcome\":{\"k\":\"accepted\",\"v\":\"valid_witness\"}," ^
+     "\"semantic_candidate_digest\":\"" ^ d64 'a' ^ "\"," ^
+     "\"submission_digest\":\"" ^ sd ^ "\",\"submission_index\":" ^ si ^ "}]" in
+  let dec_cc rr s1 s2 =
+    match A.parse_record_full_impl (mk_record ~rr ~budget:"{}") with
+    | Some rf -> A.crosscheck_impl rf s1 s2
+    | None -> assert false in
+  let rpl = [ s1pend 0 (d64 'e') (d64 'a') ] and rp2 = [ s2valid 0 (d64 'e') (d64 'a') ] in
+  assert (dec_cc (rr_one ~sd:(d64 'e') ~si:"0") rpl rp2 = []);          (* positive, via decoder *)
+  assert (mm (dec_cc (rr_one ~sd:(d64 'f') ~si:"0") rpl rp2));          (* wrong submission_digest *)
+  assert (mm (dec_cc (rr_one ~sd:(d64 'e') ~si:"1") rpl rp2));          (* wrong submission_index *)
+  assert (mm (dec_cc (rr_one ~sd:(d64 'e') ~si:"0") [ s1nr 0 ] []));    (* NotRun alignment *)
+
+  (* record_crosscheck_impl end-to-end: a full record whose recorded results match
+     the replay -> no mismatch finding *)
+  let ac_of rec_str : A.authenticated_campaign =
+    { A.authenticated_commitment = mc ~dg:good_digest ~sig_:real_sig;
+      A.authenticated_manifest = ""; A.authenticated_submissions = [];
+      A.authenticated_record = rec_str;
+      A.authenticated_completeness = A.CompletenessUnknown } in
+  let ee_rec =
+    mk_record
+      ~rr:("[{\"candidate_id\":\"c-1\",\"findings\":[]," ^
+            "\"outcome\":{\"k\":\"accepted\",\"v\":\"valid_witness\"}," ^
+            "\"semantic_candidate_digest\":\"" ^ d64 'a' ^ "\"," ^
+            "\"submission_digest\":\"" ^ d64 'e' ^ "\",\"submission_index\":0}]")
+      ~budget:"{\"max_candidates\":10}" in
+  assert (not (mm (A.record_crosscheck_impl A.parse_record_full_impl (ac_of ee_rec)
+                     [ s1pend 0 (d64 'e') (d64 'a') ]
+                     [ s2valid 0 (d64 'e') (d64 'a') ] (cfg_mc 10))));
+  assert (A.record_crosscheck_impl A.parse_record_full_impl (ac_of "{}") [] [] (cfg_mc 10)
+          = [ fnd "campaign_record_undecodable" A.Fail None None ]);
+  (* every advisory finding record_crosscheck_impl emits is in the closed
+     3-element identifier family (record_crosscheck_impl_ids) *)
+  let adv_ids = [ "budget_advisory"; "campaign_record_mismatch"; "campaign_record_undecodable" ] in
+  assert (A.advisory_finding_ids = adv_ids);
+  assert (List.for_all (fun f -> List.mem f.A.finding_check_id A.advisory_finding_ids)
+            (A.record_crosscheck_impl A.parse_record_full_impl
+               (ac_of (mk_record ~rr:(rr_one ~sd:(d64 'f') ~si:"0")
+                         ~budget:"{\"max_candidates\":3,\"max_memory_bytes\":9}"))
+               rpl rp2 (cfg_mc 10)));
+
   print_endline
     "PASS: manifest authentication -- frozen digest 0714f76c; canonical bytes; \
      Ed25519 RFC-8032 TEST 1 + tamper/invalid-point/degenerate-key rejects; \
@@ -510,4 +703,14 @@ let () =
      op_record_identity_mismatch 5 identity fields in frozen order + earliest-of-many + \
      case + distinct decoder-failure sentinels + NORMATIVE full record decode \
      (completeness/recorded_results/resource_budget skipped, canonical syntax enforced: \
-     leading-zero / -0 / dup-key / descending-key rejected) + identity-only form rejected"
+     leading-zero / -0 / dup-key / descending-key rejected) + identity-only form rejected; \
+     op_record_crosscheck FULLY TYPED submission_check_result (4-way outcome \
+     constructor, no not_run + typed findings) + forward projection coherence + \
+     replay-derived crosscheck over scr_agrees (index / mandatory digest / candidate_id / \
+     semantic_candidate_digest / typed outcome / findings incl. offending; check_id \
+     domain enforced) -- every field mutation (incl. isolated submission_digest / index) \
+     produces a campaign_record_mismatch; stage-1 NotRun and pending+stage-2-NotRun slots \
+     are filtered from derive_expected (a recorded claim for one -> mismatch); mutation + \
+     NotRun-alignment tests run THROUGH parse_record_full_impl; advisory findings lie in \
+     the closed 3-id family + advisory budget crosscheck + matching end-to-end \
+     record_crosscheck_impl"

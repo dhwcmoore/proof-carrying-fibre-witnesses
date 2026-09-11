@@ -12,7 +12,7 @@
 From Coq Require Import Extraction ExtrOcamlBasic ExtrOcamlNatInt
   ExtrOcamlNativeString.
 From PCFW Require Import CanonicalV1 ManifestAuthentication ManifestLedger
-  ManifestAudit CampaignRecord.
+  ManifestAudit CampaignRecord RecordCrosscheck.
 
 Extraction Language OCaml.
 Extraction "ocaml/extracted_manifest_auth.ml"
@@ -22,4 +22,7 @@ Extraction "ocaml/extracted_manifest_auth.ml"
   signer_authorised_impl signature_valid_impl
   ld_mismatch ledger_mismatch_impl
   manifest_audit_matches_impl
-  render_campaign_record parse_record_impl record_identity_mismatch_impl.
+  render_campaign_record parse_record_impl record_identity_mismatch_impl
+  parse_record_full_impl parse_budget_object parse_scr_outcome
+  crosscheck_impl crosscheck_budget_impl derive_expected record_crosscheck_impl
+  derive_one advisory_finding_ids.

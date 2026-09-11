@@ -91,7 +91,18 @@ type finding = { check_id : string ; outcome : check_outcome ;
 
 `check_id` ∈ `{ "B6","B1a","B1b","B1c","B2","B3","B4","B5",
                "C1","C2","C3","C5","O1","O2","O3","O6","O4","O5","C4" }` — stable
-labels; the frozen order is the sequence here.
+labels; the frozen order is the sequence here. This set is the domain for
+**stage** findings (`stage1_findings`, `stage2` findings, `context_findings`,
+`rejection_report.findings`).
+
+Findings in `replay_result.record_findings` (the `crosscheck` /
+`crosscheck_budget` output, §6.5) instead carry `check_id` from the **closed
+advisory family** `{ "budget_advisory", "campaign_record_mismatch",
+"campaign_record_undecodable" }`, disjoint from the stage set; for that family
+`offending` is always omitted and `reason`, when present, is a fixed
+lower-snake-case token. Grammar and deterministic order:
+`PHASE_1_ADVISORY_FINDING_IDS_ERRATUM.md` (consistency erratum, reviewer-concurred
+2026-09-10).
 
 ## 3. The runner, the transcript, and the faithfulness assumption
 
@@ -421,6 +432,14 @@ and `lookup_unique tr <key>` for each `run`. A stage-1 `charge` `` `Over `` is a
 
 `replay` is a pure total function of its arguments. `record_findings :=
 crosscheck(ac.rec.recorded_results, stage1, stage2) ++ crosscheck_budget(ac.rec.resource_budget, vcfg)`.
+`crosscheck` compares `ac.rec.recorded_results` position-by-position against the
+list of `submission_check_result` values the replay produced — a stage-1
+`` `NotRun `` slot and a `` `Pending `` submission whose stage-2 slot is
+`` `NotRun `` contribute none (§2.2.5: mandatory `submission_digest`, no
+`not_run` outcome). `record_findings` draw `check_id` from the closed advisory
+family (§2); their grammar and deterministic order are in
+`PHASE_1_ADVISORY_FINDING_IDS_ERRATUM.md`. `decide` / `verdict_of` never read
+`record_findings` — the verdict is the replayed verdict (T26).
 
 ### 6.6 The `` `NotRun `` theorem — scoped
 

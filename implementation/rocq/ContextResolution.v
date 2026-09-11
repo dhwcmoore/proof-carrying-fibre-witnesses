@@ -79,7 +79,7 @@ Variable committed_authcommitment : manifest_commitment.
 Variable commits : manifest_commitment -> descriptor -> Prop.
 Hypothesis committed_authentic : commits committed_authcommitment committed_descriptor.
 
-Definition pass_finding (id : string) : finding := mkFinding id Pass None.
+Definition pass_finding (id : string) : finding := mkFinding id Pass None None.
 
 Definition byte_digest_consistent (lc : loaded_context) (d : descriptor) : Prop :=
   model_digest_of (loaded_model_bytes lc) = d_model_digest d /\

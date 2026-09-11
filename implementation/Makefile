@@ -28,11 +28,12 @@ rocq:
 	coqc -Q rocq PCFW rocq/ManifestLedger.v
 	coqc -Q rocq PCFW rocq/ManifestAudit.v
 	coqc -Q rocq PCFW rocq/CampaignRecord.v
+	coqc -Q rocq PCFW rocq/RecordCrosscheck.v
 	coqc -Q rocq PCFW rocq/ManifestPipeline.v
 	coqc -Q rocq PCFW rocq/ExtractStage2.v
 	coqc -Q rocq PCFW rocq/ExtractManifestAuthentication.v
 	coqchk -Q rocq PCFW PCFW.FibreWitnessKernel PCFW.Orchestration \
-	  PCFW.Stage2 PCFW.Stage2Adapter PCFW.Stage1 PCFW.Stage1Invariant PCFW.Stage1Wrapper PCFW.ContextResolution PCFW.PipelineWiring PCFW.ValidationBinding PCFW.CanonicalV1 PCFW.ManifestMatching PCFW.ManifestAuthentication PCFW.ManifestLedger PCFW.ManifestAudit PCFW.CampaignRecord PCFW.ManifestPipeline
+	  PCFW.Stage2 PCFW.Stage2Adapter PCFW.Stage1 PCFW.Stage1Invariant PCFW.Stage1Wrapper PCFW.ContextResolution PCFW.PipelineWiring PCFW.ValidationBinding PCFW.CanonicalV1 PCFW.ManifestMatching PCFW.ManifestAuthentication PCFW.ManifestLedger PCFW.ManifestAudit PCFW.CampaignRecord PCFW.RecordCrosscheck PCFW.ManifestPipeline
 	coqtop -quiet -Q rocq PCFW < rocq/PrintKernelAssumptions.v
 
 assumptions:

@@ -77,6 +77,11 @@ Variable parse_literal : token -> option Z.
 (* the semantic candidate digest (digest_v1 "pcfw.candidate.v1" (to_cv c)). *)
 Variable semantic_digest_of : parsed_candidate -> digest.
 
+(* the parsed candidate_id wire field (VERDICT_SEMANTICS.md 4.1).  [digest] is a
+   [Notation] for [string] (Orchestration); [String] is not imported here to
+   avoid the [List]/[String] [length] collision. *)
+Variable candidate_id_of : candidate_submission -> digest.
+
 Inductive wire_result :=
 | WireReject (r : b_reason)
 | WireOk (c : parsed_candidate).
@@ -89,7 +94,7 @@ Definition wire_parse (cfg : verifier_config) (pd : policy_document)
       if andb (Nat.eqb (length xs) n_in) (Nat.eqb (length ys) n_in)
       then match list_map_option parse_literal xs,
                  list_map_option parse_literal ys with
-           | Some xz, Some yz => WireOk (mkParsedCandidate xz yz)
+           | Some xz, Some yz => WireOk (mkParsedCandidate (candidate_id_of sub) xz yz)
            | _, _ => WireReject MalformedIntegerLiteral       (* B5 *)
            end
       else WireReject InputStructureError                     (* B4 *)
@@ -100,9 +105,9 @@ Definition op_stage1_wrapper
   (i : nat) (sub : candidate_submission) : stage1_result :=
   let sd := submission_digest sub in
   match wire_parse cfg pd sub with
-  | WireReject r => mkStage1Result i sd (S1Rejected r) []
+  | WireReject r => mkStage1Result i sd None None (S1Rejected r) []
   | WireOk c =>
-      mkStage1Result i sd
+      mkStage1Result i sd (Some (pc_candidate_id c)) (Some (semantic_digest_of c))
         (stage1_semantic_check C sd (semantic_digest_of c) i c) []
   end.
 
@@ -129,7 +134,7 @@ Theorem wrapper_reject_not_pending :
   forall cfg pd p i sub r,
     wire_parse cfg pd sub = WireReject r ->
     op_stage1_wrapper cfg pd p i sub
-      = mkStage1Result i (submission_digest sub) (S1Rejected r) [].
+      = mkStage1Result i (submission_digest sub) None None (S1Rejected r) [].
 Proof.
   intros cfg pd p i sub r H. unfold op_stage1_wrapper. rewrite H. reflexivity.
 Qed.
@@ -178,6 +183,28 @@ Proof.
   exists c. split; [ reflexivity |].
   destruct (stage1_pending_identity _ _ _ _ _ H) as (Hc & Hi & Hsd & Hsemd & Hf).
   repeat split; assumption.
+Qed.
+
+(* a parsed candidate: [candidate_id] and [semantic_candidate_digest] are both
+   [Some ...], bound to the raw sub (VERDICT_SEMANTICS.md 4.1). *)
+Lemma wrapper_parsed_ids :
+  forall cfg pd p i sub c,
+    wire_parse cfg pd sub = WireOk c ->
+    s1_candidate_id (op_stage1_wrapper cfg pd p i sub) = Some (pc_candidate_id c) /\
+    s1_semantic_digest (op_stage1_wrapper cfg pd p i sub) = Some (semantic_digest_of c).
+Proof.
+  intros cfg pd p i sub c H. unfold op_stage1_wrapper. rewrite H.
+  split; reflexivity.
+Qed.
+
+Lemma wrapper_reject_ids :
+  forall cfg pd p i sub r,
+    wire_parse cfg pd sub = WireReject r ->
+    s1_candidate_id (op_stage1_wrapper cfg pd p i sub) = None /\
+    s1_semantic_digest (op_stage1_wrapper cfg pd p i sub) = None.
+Proof.
+  intros cfg pd p i sub r H. unfold op_stage1_wrapper. rewrite H.
+  split; reflexivity.
 Qed.
 
 (* ----- (4) discharge op_stage1_sound ----- *)

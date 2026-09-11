@@ -43,10 +43,16 @@ Inductive b_reason : Type :=
 | MalformedIntegerLiteral.
 
 Inductive check_outcome := Pass | Fail | NotEvaluated.
+(* VERDICT_SEMANTICS.md 2:
+   finding = { check_id : string ; outcome : check_outcome ;
+               reason : string option ; offending : canonical_value option }
+   The offending value is the raw canonical-JSON text of the offending term
+   (canonical_value serialises to exactly that). *)
 Record finding := mkFinding {
   finding_check_id : string;
   finding_outcome : check_outcome;
-  finding_reason : option string
+  finding_reason : option string;
+  finding_offending : option string
 }.
 
 Record fuel_ledger := mkFuelLedger {
@@ -105,6 +111,7 @@ Record candidate_submission := mkCandidateSubmission {
 }.
 
 Record parsed_candidate := mkParsedCandidate {
+  pc_candidate_id : string;   (* VERDICT_SEMANTICS.md 4.1 / parsed_candidate keys *)
   candidate_x : list Z;
   candidate_y : list Z
 }.
@@ -122,9 +129,14 @@ Inductive stage1_verdict :=
 | S1NotAWitness (reason : c_reason)
 | S1Pending (pending : pending_submission).
 
+(* VERDICT_SEMANTICS.md 4.1: [candidate_id] / [semantic_candidate_digest] are
+   [Some] for EVERY parsed candidate (i.e. every non-[S1Rejected] verdict),
+   [None] on a parse rejection. *)
 Record stage1_result := mkStage1Result {
   s1_index : nat;
   s1_submission_digest : digest;
+  s1_candidate_id : option string;
+  s1_semantic_digest : option digest;
   s1_verdict : stage1_verdict;
   s1_findings : list finding
 }.
@@ -549,7 +561,7 @@ Fixpoint run_stage2
   end.
 
 Definition failed_finding (id reason : string) : finding :=
-  mkFinding id Fail (Some reason).
+  mkFinding id Fail (Some reason) None.
 
 Definition finish_replay
   (ops : primitive_ops) (ac : authenticated_campaign) (cfg : verifier_config)

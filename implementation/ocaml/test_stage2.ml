@@ -94,7 +94,7 @@ let () =
   let ps ~cx ~cy : S.pending_submission =
     { S.pending_index = 7;
       S.pending_submission_digest = "sd"; S.pending_semantic_digest = "cd";
-      S.pending_candidate = { S.candidate_x = cx; S.candidate_y = cy };
+      S.pending_candidate = { S.pc_candidate_id = "c"; S.candidate_x = cx; S.candidate_y = cy };
       S.pending_findings = [] } in
   let rc : S.resolved_context =
     { S.resolved_policy = "p"; S.resolved_context_token = "t"; S.resolved_descriptor = "d" } in

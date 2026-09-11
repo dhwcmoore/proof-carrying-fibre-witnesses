@@ -20,7 +20,7 @@ let dom_is0 : int S.vec -> bool = fun v -> hd1 v = 0        (* [0] in, [2] out *
 let tgt_neq0 : int S.vec -> bool = fun v -> hd1 v <> 0
 let tgt_true : int S.vec -> bool = fun _ -> true
 
-let cand cx cy : S.parsed_candidate = { S.candidate_x = cx; S.candidate_y = cy }
+let cand cx cy : S.parsed_candidate = { S.pc_candidate_id = "c"; S.candidate_x = cx; S.candidate_y = cy }
 
 let run ?(domainb = all_true) ?(target = tgt_neq0) c =
   S.stage1_semantic_check 1 1 1 (ctx ~domainb ~target) "sd" "cd" 7 c

@@ -42,14 +42,19 @@
       parse_manifest_impl], step 8) with a SEPARATE theorem
     [validate_campaign_record_agrees]: success gives the record and manifest
     decoding and their five step-8 identity fields agreeing, the last against
-    [commitment_digest (authenticated_commitment ac)].  Bounded to the five
-    identity fields; the full record decoder (for [op_record_crosscheck]) is
-    future work. *)
+    [commitment_digest (authenticated_commitment ac)].
+
+    [op_record_crosscheck] is concrete
+    ([RecordCrosscheck.record_crosscheck_impl parse_record_full_impl]).  Its
+    output is advisory only: [pipeline_verdict_indep_of_crosscheck] shows the
+    campaign verdict is unchanged if [op_record_crosscheck] is replaced by any
+    other function (VERDICT_SEMANTICS.md 6.5 -- [record_findings] is not read by
+    [decide]). *)
 
 From Coq Require Import Bool List String.
 From PCFW Require Import Orchestration CanonicalV1 ValidationBinding
   ManifestMatching ManifestAuthentication ManifestLedger ManifestAudit
-  CampaignRecord.
+  CampaignRecord RecordCrosscheck.
 Import ListNotations.
 
 Section Pipeline.
@@ -92,7 +97,7 @@ Definition pipeline_ops (base : primitive_ops) : primitive_ops :=
     (op_preflight a)
     (op_eval_o3 a)
     (op_stage2_check a)
-    (op_record_crosscheck a)
+    (RecordCrosscheck.record_crosscheck_impl parse_record_full_impl)
     (op_transcript_digest a).
 
 Lemma pipeline_ops_signer : forall base,
@@ -296,6 +301,26 @@ Proof.
   { rewrite Hac. unfold authenticated_of. cbn. congruence. }
   exists rv, cm. rewrite Hcom.
   repeat split; assumption.
+Qed.
+
+(* ----- op_record_crosscheck: concrete, and advisory-only ----- *)
+
+Lemma pipeline_ops_crosscheck : forall base,
+  op_record_crosscheck (pipeline_ops base)
+  = RecordCrosscheck.record_crosscheck_impl parse_record_full_impl.
+Proof. reflexivity. Qed.
+
+(* the campaign verdict does not depend on op_record_crosscheck: replacing the
+   pipeline's crosscheck by ANY function [g] leaves the verdict unchanged.
+   (VERDICT_SEMANTICS.md 6.5 -- record_findings are advisory, never read by
+   decide.) *)
+Theorem pipeline_verdict_indep_of_crosscheck :
+  forall base g ti vr src,
+    verdict_of (assess_validated
+      (RecordCrosscheck.set_crosscheck (pipeline_ops base) g) ti vr src)
+    = verdict_of (assess_validated (pipeline_ops base) ti vr src).
+Proof.
+  intros. apply RecordCrosscheck.assess_validated_verdict_indep_crosscheck.
 Qed.
 
 End Pipeline.

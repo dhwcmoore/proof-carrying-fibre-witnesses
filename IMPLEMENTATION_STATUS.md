@@ -321,8 +321,28 @@ Distinct decoder-failure sentinels `"!record_undecodable"` / `"!manifest_undecod
 Per-field `_some_<field>` lemmas (preceding fields agree, named field differs).
 Standalone `validate_campaign_valid_record`; wired into `pipeline_ops`; separate
 `validate_campaign_record_agrees`; `validate_campaign_pipeline` unchanged. Bounded to
-the five identity fields -- `op_record_crosscheck` needs a full typed
-representation + semantic decoder for `recorded_results` **and** `resource_budget`.
+the five identity fields.  `op_record_crosscheck` is now concrete
+(`RecordCrosscheck.v` -- **reviewer-concurred by source inspection and promoted**
+(r14 held, r15 partial, r16 held, **r17** -- ZIP sha256 `476c32c3…de10de1`): a data-rep repair to frozen
+`Orchestration.v` (`finding` `+offending`; `parsed_candidate` `+candidate_id`;
+`stage1_result` `+candidate_id`/`+semantic_digest` -- spec-conformant), a fully
+typed `submission_check_result` (`scr_outcome_view` has **no `not_run`** case),
+a propositional `scr_agrees` relation with the two-sided
+`scr_matches_expected_true_iff`, and the top-level **`crosscheck_impl_nil_iff`** --
+`crosscheck_impl rf s1 s2 = []` iff `Forall2 scr_agrees (rf_recorded rf)
+(derive_expected s1 s2)` (T26; equal length + index order forced).
+`derive_expected` is **filtered**: a stage-1 `NotRun` slot and a pending +
+stage-2-`NotRun` slot produce no `submission_check_result` (AUDIT_POLICY §2.2.5),
+proved an order/index-preserving projection (`derive_expected_indices`); every
+derived result has a mandatory digest. Advisory `record_findings` identifiers
+are a closed 3-element family disjoint from the stage `check_id` set
+(`record_crosscheck_impl_ids`), authorised by
+`PHASE_1_ADVISORY_FINDING_IDS_ERRATUM.md` (reviewer-concurred 2026-09-10, applied
+to `VERDICT_SEMANTICS.md` §2/§6.5, `AUDIT_POLICY_AND_EVIDENCE.md` §2.2.5,
+`THREAT_MODEL.md` T26). Plus the unchanged **verdict-invariance theorem**;
+`PHASE_1_RECORD_CROSSCHECK.md`. `parse_record_full_impl_projects` is the forward
+projection ONLY. The r17 disposition covers the modified `Orchestration.v` /
+`Stage1Wrapper.v` / `PipelineWiring.v` / `ContextResolution.v`.
 
 **Promotion (2026-09-10).** The cumulative **r5–r13 validation block**
 (`ManifestAuthentication` / `ManifestMatching` / `ManifestLedger` / `ManifestAudit`
@@ -331,8 +351,8 @@ by source inspection and promoted** (reviewer disposition on r13; reviewed r13
 bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`).
 Not a Phase 1 closure.
 
-Across `make check`, **101** `Print Assumptions` "Closed under the global
-context"; `coqchk` covers 17 modules; seven `make test` harnesses PASS.
+Across `make check`, **121** `Print Assumptions` "Closed under the global
+context"; `coqchk` covers 18 modules; seven `make test` harnesses PASS.
 Packaging: `make clean` before archiving (source only -- no `*.vo`,
 `extracted_*.ml`, or compiled executables); the `Makefile` locates crypto
 libraries via `opam var lib` with a `?=` override.

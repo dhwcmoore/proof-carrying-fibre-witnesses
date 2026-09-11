@@ -181,14 +181,12 @@ representation), now concrete standalone AND integrated** (`pipeline_ops`),
 bounded to the five step-8 identity fields.  Residual: the two decoders passed in
 (both concrete) and, downstream, retrieval integrity.
 
-Still OPEN: `op_completeness_wellformed`, `op_record_crosscheck` (needs a full
-typed representation + semantic decoder for `recorded_results` **and**
-`resource_budget` -- the frozen `op_record_crosscheck` is both the
-recorded-result comparison and `crosscheck_budget`; a follow-on to this unit),
-`op_transcript_digest`.
+Still OPEN: `op_completeness_wellformed`, `op_transcript_digest`.
+(`op_record_crosscheck` was made concrete in the follow-on `RecordCrosscheck`
+unit -- `PHASE_1_RECORD_CROSSCHECK.md`.)
 
-`make check` exits 0: `coqchk` covers **17** modules (adds `PCFW.CampaignRecord`);
-across `make check`, **101** `Print Assumptions` "Closed under the global context";
+`make check` exits 0: `coqchk` covers **18** modules (adds `PCFW.CampaignRecord`);
+across `make check`, **121** `Print Assumptions` "Closed under the global context";
 **seven** `make test` harnesses PASS.
 
 Phase 1 remains **open**; Phase 2 is not authorised. **Reviewer-concurred by source inspection and promoted** as part of the cumulative r5–r13 validation block (reviewer disposition on r13; the reviewed r13 bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`). Not a Phase 1 closure.

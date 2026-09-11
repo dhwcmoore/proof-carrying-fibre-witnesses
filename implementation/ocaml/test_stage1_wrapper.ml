@@ -36,8 +36,10 @@ let cfg : S.verifier_config =
     S.max_fuel = 1000; S.model_call_fuel = 1; S.max_fuel_per_candidate = 100;
     S.schedule = sched; S.config_trust_anchor = { S.ta_authorised_signers = []; S.ta_keys = [] } }
 
+let cand_id (_ : S.candidate_submission) : S.digest = "cid"
+
 let run lp =
-  S.op_stage1_wrapper 1 1 1 ctx (lower lp) parse_literal semd cfg "pd" "p" 7 sub
+  S.op_stage1_wrapper 1 1 1 ctx (lower lp) parse_literal semd cand_id cfg "pd" "p" 7 sub
 
 let fail msg = Printf.printf "FAIL: %s\n" msg; exit 1
 

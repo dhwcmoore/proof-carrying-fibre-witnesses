@@ -191,13 +191,14 @@ concrete (`ManifestAudit`, full `true` equivalence -- `PHASE_1_MANIFEST_AUDIT.md
 `op_record_identity_mismatch` is concrete (`CampaignRecord`, structured
 `campaign_record_view` + canonical full-record decoder, five step-8 identity fields --
 `PHASE_1_CAMPAIGN_RECORD.md`).
-Still OPEN: `op_completeness_wellformed`, `op_record_crosscheck` (needs
-`recorded_results` represented), `op_transcript_digest`; a maintained Ed25519;
+Still OPEN: `op_completeness_wellformed`, `op_transcript_digest`;
+(`op_record_crosscheck` is now concrete -- `RecordCrosscheck`,
+`PHASE_1_RECORD_CROSSCHECK.md`, advisory-only with a verdict-invariance theorem); a maintained Ed25519;
 the retrieval-integrity premise; a key-order-tolerant manifest decoder.
 
-`make check` exits 0: `coqchk` covers 17 modules (adds `PCFW.CanonicalV1`,
+`make check` exits 0: `coqchk` covers 18 modules (adds `PCFW.CanonicalV1`,
 `PCFW.ManifestAuthentication`, `PCFW.ManifestPipeline`, `PCFW.ManifestLedger`,
-`PCFW.ManifestAudit`, `PCFW.CampaignRecord`); across `make check`, **101** `Print
+`PCFW.ManifestAudit`, `PCFW.CampaignRecord`, `PCFW.RecordCrosscheck`); across `make check`, **121** `Print
 Assumptions` "Closed under the global context" (the last 30 are the
 `op_ledger_mismatch`, `op_manifest_audit_matches` and `op_record_identity_mismatch`
 units -- `PHASE_1_MANIFEST_LEDGER.md`, `PHASE_1_MANIFEST_AUDIT.md`,

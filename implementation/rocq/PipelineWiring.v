@@ -60,6 +60,7 @@ Variable lower_parse :
   (b_reason + (list token * list token)).
 Variable parse_literal : token -> option Z.
 Variable semantic_digest_of : parsed_candidate -> digest.
+Variable candidate_id_of : candidate_submission -> digest.
 
 (* context-resolution F.3 inputs *)
 Variable p_committed : policy.
@@ -72,7 +73,7 @@ Variable probe_of_spec : bytes -> option (Vec Z n_pre * Vec Z n_obs).
 Variable base : primitive_ops.
 
 Definition wired_stage1 :=
-  op_stage1_wrapper C lower_parse parse_literal semantic_digest_of.
+  op_stage1_wrapper C lower_parse parse_literal semantic_digest_of candidate_id_of.
 Definition wired_stage2 := adapter_stage2_check C rng.
 Definition wired_preflight :=
   preflight_check digest_eqb model_digest_of preproc_digest_of inference_digest_of

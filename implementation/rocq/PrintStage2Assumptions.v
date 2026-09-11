@@ -1,4 +1,4 @@
-From PCFW Require Import Stage1 Stage1Invariant Stage1Wrapper ContextResolution PipelineWiring ValidationBinding ManifestMatching CanonicalV1 ManifestAuthentication ManifestLedger ManifestAudit CampaignRecord ManifestPipeline Stage2 Stage2Adapter.
+From PCFW Require Import Stage1 Stage1Invariant Stage1Wrapper ContextResolution PipelineWiring ValidationBinding ManifestMatching CanonicalV1 ManifestAuthentication ManifestLedger ManifestAudit CampaignRecord RecordCrosscheck ManifestPipeline Stage2 Stage2Adapter.
 
 (* stage-1 semantic checker -> adapter hypotheses *)
 Print Assumptions Stage1.stage1_pending_identity.
@@ -20,6 +20,8 @@ Print Assumptions Stage1Wrapper.wrapper_reject_not_pending.
 Print Assumptions Stage1Wrapper.wrapper_pending_binds.
 Print Assumptions Stage1Wrapper.wrapper_fields.
 Print Assumptions Stage1Wrapper.wrapper_op_stage1_sound.
+Print Assumptions Stage1Wrapper.wrapper_parsed_ids.
+Print Assumptions Stage1Wrapper.wrapper_reject_ids.
 
 (* concrete O1/O2/O3 context resolution *)
 Print Assumptions ContextResolution.preflight_ok_binds.
@@ -108,6 +110,27 @@ Print Assumptions CampaignRecord.record_identity_mismatch_impl_record_undecodabl
 Print Assumptions CampaignRecord.record_identity_mismatch_impl_manifest_undecodable_iff.
 Print Assumptions ValidationBinding.validate_campaign_valid_record.
 Print Assumptions ManifestPipeline.validate_campaign_record_agrees.
+
+(* typed recorded_results + resource_budget, the two crosschecks, concrete
+   op_record_crosscheck, and verdict invariance *)
+Print Assumptions RecordCrosscheck.parse_record_full_impl_projects.
+Print Assumptions RecordCrosscheck.parse_record_full_impl_vector.
+Print Assumptions RecordCrosscheck.parse_record_full_impl_vector_projects.
+Print Assumptions RecordCrosscheck.parse_scr_outcome_rejects_unknown_reason.
+Print Assumptions RecordCrosscheck.parse_budget_object_rejects_descending.
+Print Assumptions RecordCrosscheck.parse_budget_object_rejects_leading_zero.
+Print Assumptions RecordCrosscheck.parse_budget_object_rejects_unknown_key.
+Print Assumptions RecordCrosscheck.scr_matches_expected_true_iff.
+Print Assumptions RecordCrosscheck.scr_matches_expected_fields.
+Print Assumptions RecordCrosscheck.crosscheck_impl_nil_iff_bool.
+Print Assumptions RecordCrosscheck.crosscheck_impl_nil_iff.
+Print Assumptions RecordCrosscheck.derive_expected_indices.
+Print Assumptions RecordCrosscheck.derive_expected_length.
+Print Assumptions RecordCrosscheck.record_crosscheck_impl_ids.
+Print Assumptions RecordCrosscheck.verdict_decide_ignores_record_findings.
+Print Assumptions RecordCrosscheck.replay_verdict_fields_indep_crosscheck.
+Print Assumptions RecordCrosscheck.assess_validated_verdict_indep_crosscheck.
+Print Assumptions ManifestPipeline.pipeline_verdict_indep_of_crosscheck.
 
 (* The kernel connection: each must print "Closed under the global context". *)
 Print Assumptions Stage2.stage2_valid_checked_witness.
