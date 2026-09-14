@@ -74,7 +74,7 @@
 From Coq Require Import Bool List String.
 From PCFW Require Import Orchestration CanonicalV1 ValidationBinding
   ManifestMatching ManifestAuthentication ManifestLedger ManifestAudit
-  CampaignRecord RecordCrosscheck CompletenessWellformed.
+  CampaignRecord RecordCrosscheck CompletenessWellformed TranscriptDigest.
 Import ListNotations.
 
 Section Pipeline.
@@ -445,6 +445,25 @@ Theorem pipeline_verdict_indep_of_crosscheck :
     = verdict_of (assess_validated (pipeline_ops base) ti vr src).
 Proof.
   intros. apply RecordCrosscheck.assess_validated_verdict_indep_crosscheck.
+Qed.
+
+(* ----- op_transcript_digest: a contract-bound primitive (the hook itself is
+   passed through unchanged; it is not made concrete here), and the pipeline
+   preserves any baseline agreement premise ----- *)
+
+Lemma pipeline_ops_transcript_digest : forall base,
+  op_transcript_digest (pipeline_ops base) = op_transcript_digest base.
+Proof. reflexivity. Qed.
+
+Theorem pipeline_transcript_digest_agrees :
+  forall (transcript_digest_v1 : exec_transcript -> digest) tr,
+    TranscriptDigest.transcript_digest_agrees transcript_digest_v1 base tr ->
+    TranscriptDigest.transcript_digest_agrees transcript_digest_v1
+      (pipeline_ops base) tr.
+Proof.
+  intros transcript_digest_v1 tr Hagree.
+  unfold TranscriptDigest.transcript_digest_agrees in *.
+  rewrite (pipeline_ops_transcript_digest base). exact Hagree.
 Qed.
 
 End Pipeline.

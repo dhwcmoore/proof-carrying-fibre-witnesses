@@ -243,12 +243,17 @@ concrete completeness-status decoder from `ti_record ti` remains future work
 (`record_completeness_of` / `record_completeness_load_validated` stand in as
 an explicit per-input premise until then).
 
-Still OPEN: `op_transcript_digest`.
+`op_transcript_digest` now has a contract-bound primitive treatment,
+reviewer-concurred + promoted (`TranscriptDigest`, r3 -- `PHASE_1_TRANSCRIPT_DIGEST.md`;
+the hook stays primitive, its normative digest realisation stays F.3, so it
+is NOT concrete); no validation-tier `primitive_ops` member is left
+unaddressed.
 
-`make check` exits 0: `coqchk` covers **19** modules; across `make check`,
-**133** `Print Assumptions` "Closed under the global context" (121 + 12);
-**seven** `make test` harnesses PASS.
+`make check` exits 0: `coqchk` covers **20** modules; across `make check`,
+**152** `Print Assumptions` "Closed under the global context"; **eight**
+`make test` harnesses PASS.
 
 Phase 1 remains **open**; Phase 2 is not authorised; this unit is promoted but
 that is **not** a Phase 1 closure. The r5-r13 and r17 promotions are
-unaffected. Next authorised validation unit: `op_transcript_digest`.
+unaffected. `op_transcript_digest` (`TranscriptDigest`, r3) is reviewer-
+concurred and promoted -- the final `primitive_ops` member is disposed of.

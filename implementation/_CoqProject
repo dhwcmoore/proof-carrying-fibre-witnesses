@@ -19,6 +19,8 @@ rocq/ManifestAudit.v
 rocq/CampaignRecord.v
 rocq/RecordCrosscheck.v
 rocq/CompletenessWellformed.v
+rocq/TranscriptDigest.v
 rocq/ManifestPipeline.v
 rocq/ExtractStage2.v
 rocq/ExtractManifestAuthentication.v
+rocq/ExtractTranscriptDigest.v

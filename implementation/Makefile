@@ -30,16 +30,19 @@ rocq:
 	coqc -Q rocq PCFW rocq/CampaignRecord.v
 	coqc -Q rocq PCFW rocq/RecordCrosscheck.v
 	coqc -Q rocq PCFW rocq/CompletenessWellformed.v
+	coqc -Q rocq PCFW rocq/TranscriptDigest.v
 	coqc -Q rocq PCFW rocq/ManifestPipeline.v
 	coqc -Q rocq PCFW rocq/ExtractStage2.v
 	coqc -Q rocq PCFW rocq/ExtractManifestAuthentication.v
+	coqc -Q rocq PCFW rocq/ExtractTranscriptDigest.v
 	coqchk -Q rocq PCFW PCFW.FibreWitnessKernel PCFW.Orchestration \
-	  PCFW.Stage2 PCFW.Stage2Adapter PCFW.Stage1 PCFW.Stage1Invariant PCFW.Stage1Wrapper PCFW.ContextResolution PCFW.PipelineWiring PCFW.ValidationBinding PCFW.CanonicalV1 PCFW.ManifestMatching PCFW.ManifestAuthentication PCFW.ManifestLedger PCFW.ManifestAudit PCFW.CampaignRecord PCFW.RecordCrosscheck PCFW.CompletenessWellformed PCFW.ManifestPipeline
+	  PCFW.Stage2 PCFW.Stage2Adapter PCFW.Stage1 PCFW.Stage1Invariant PCFW.Stage1Wrapper PCFW.ContextResolution PCFW.PipelineWiring PCFW.ValidationBinding PCFW.CanonicalV1 PCFW.ManifestMatching PCFW.ManifestAuthentication PCFW.ManifestLedger PCFW.ManifestAudit PCFW.CampaignRecord PCFW.RecordCrosscheck PCFW.CompletenessWellformed PCFW.TranscriptDigest PCFW.ManifestPipeline
 	coqtop -quiet -Q rocq PCFW < rocq/PrintKernelAssumptions.v
 
 assumptions:
 	coqtop -quiet -Q rocq PCFW < rocq/PrintOrchestrationAssumptions.v
 	coqtop -quiet -Q rocq PCFW < rocq/PrintStage2Assumptions.v
+	coqtop -quiet -Q rocq PCFW < rocq/PrintTranscriptDigestAssumptions.v
 
 ocaml:
 	ocamlc -I ocaml -c ocaml/orchestration.mli
@@ -60,6 +63,10 @@ test: ocaml rocq
 	./ocaml/test_context_resolution
 	ocamlc -I ocaml ocaml/extracted_stage2.cmo ocaml/test_manifest_matching.ml -o ocaml/test_manifest_matching
 	./ocaml/test_manifest_matching
+	ocamlc -I ocaml -c ocaml/extracted_transcript_digest.mli
+	ocamlc -I ocaml -c ocaml/extracted_transcript_digest.ml
+	ocamlc -I ocaml ocaml/extracted_transcript_digest.cmo ocaml/test_transcript_digest.ml -o ocaml/test_transcript_digest
+	./ocaml/test_transcript_digest
 	ocamlc -I ocaml -c ocaml/extracted_manifest_auth.mli
 	ocamlc -I ocaml -c ocaml/extracted_manifest_auth.ml
 	ocamlc -custom -I ocaml -I $(ZARITH) -I $(SHALIB) $(ZARITH)/zarith.cma $(SHALIB)/sha.cma -cclib -lsha_stubs -cclib -L$(SHALIB) ocaml/extracted_manifest_auth.cmo ocaml/test_manifest_authentication.ml -o ocaml/test_manifest_authentication
@@ -71,8 +78,9 @@ check-kernel-trust:
 clean:
 	find rocq -type f \( -name '*.vo' -o -name '*.vos' -o -name '*.vok' -o -name '*.glob' -o -name '*.aux' \) -delete
 	find ocaml -type f \( -name '*.cmi' -o -name '*.cmo' -o -name '*.cmx' -o -name '*.o' \) -delete
-	rm -f ocaml/test_context_bundle ocaml/test_stage2 ocaml/test_stage1 ocaml/test_stage1_wrapper ocaml/test_context_resolution ocaml/test_manifest_matching ocaml/test_manifest_authentication
+	rm -f ocaml/test_context_bundle ocaml/test_stage2 ocaml/test_stage1 ocaml/test_stage1_wrapper ocaml/test_context_resolution ocaml/test_manifest_matching ocaml/test_transcript_digest ocaml/test_manifest_authentication
 	rm -f ocaml/extracted_stage2.ml ocaml/extracted_stage2.mli
+	rm -f ocaml/extracted_transcript_digest.ml ocaml/extracted_transcript_digest.mli
 	rm -f ocaml/extracted_manifest_auth.ml ocaml/extracted_manifest_auth.mli
 	rm -f ocaml/extracted_orchestration.ml ocaml/extracted_orchestration.mli
 	rm -f ocaml/extracted_fibre_witness_kernel.ml ocaml/extracted_fibre_witness_kernel.mli

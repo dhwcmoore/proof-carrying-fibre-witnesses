@@ -181,12 +181,12 @@ representation), now concrete standalone AND integrated** (`pipeline_ops`),
 bounded to the five step-8 identity fields.  Residual: the two decoders passed in
 (both concrete) and, downstream, retrieval integrity.
 
-Still OPEN: `op_transcript_digest`. `op_completeness_wellformed` is now concrete (`CompletenessWellformed`, author-reported -- `PHASE_1_COMPLETENESS_WELLFORMED.md`).
+`op_completeness_wellformed` is concrete and reviewer-concurred + promoted (`CompletenessWellformed`, r3 -- `PHASE_1_COMPLETENESS_WELLFORMED.md`); `op_transcript_digest` has a contract-bound primitive treatment, reviewer-concurred + promoted (`TranscriptDigest`, r3 -- `PHASE_1_TRANSCRIPT_DIGEST.md`; the hook itself stays primitive, its normative digest realisation stays F.3, so it is NOT concrete). No validation-tier `primitive_ops` member is left unaddressed.
 (`op_record_crosscheck` was made concrete in the follow-on `RecordCrosscheck`
 unit -- `PHASE_1_RECORD_CROSSCHECK.md`.)
 
-`make check` exits 0: `coqchk` covers **19** modules (adds `PCFW.CampaignRecord`);
-across `make check`, **133** `Print Assumptions` "Closed under the global context";
-**seven** `make test` harnesses PASS.
+`make check` exits 0: `coqchk` covers **20** modules (adds `PCFW.CampaignRecord`);
+across `make check`, **152** `Print Assumptions` "Closed under the global context";
+**eight** `make test` harnesses PASS.
 
 Phase 1 remains **open**; Phase 2 is not authorised. **Reviewer-concurred by source inspection and promoted** as part of the cumulative r5–r13 validation block (reviewer disposition on r13; the reviewed r13 bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`). Not a Phase 1 closure.

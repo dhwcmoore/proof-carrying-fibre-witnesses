@@ -202,3 +202,38 @@ the new constructor); the hand-written skeleton compiles; `make test` prints
 environment's `zarith` ships no `.cmi` files — an environment gap, not a source
 defect).
 
+## Current status (this section only; not updated per Phase 1 unit)
+
+`primitive_ops` (§ "What is abstract" above) is, as of this section, no longer
+uniformly abstract: every validation-tier member EXCEPT `op_transcript_digest`
+(discussed separately below) has a concrete implementation, each in its own
+`rocq/*.v` module wired into `ManifestPipeline.pipeline_ops`
+(`ManifestAuthentication`, `ManifestLedger`, `ManifestAudit`,
+`CampaignRecord`, `RecordCrosscheck`, `CompletenessWellformed`) -- see
+`PHASE_1_STATUS.md`, the authoritative, kept current per-unit ledger, for
+exact status and reviewer disposition of each.
+`op_stage1_check` / `op_preflight` / `op_eval_o3` / `op_stage2_check` are
+concrete and wired (`Stage1Wrapper`, `ContextResolution`, `Stage2Adapter`,
+`PipelineWiring`). The five "Deliberate proof holes" `Admitted` obligations
+listed above were all discharged in `PHASE_1_ORCHESTRATION_PROOFS.md`; none
+remain `Admitted` in `rocq/Orchestration.v`.
+
+`op_transcript_digest : exec_transcript -> digest`, the last `primitive_ops`
+member, has an **author-reported** (not yet reviewer-concurred, not promoted)
+treatment in `rocq/TranscriptDigest.v` -- an interface-and-evidence-binding
+unit, not a cryptographic implementation: it stays a primitive hook (its
+normative target, `digest_v1("pcfw.exec_transcript.v1", to_cv(tr))`, is an
+abstract Section `Variable`, F.3), proves ordinary functional determinism (not
+collision resistance), and proves that `validate_campaign` / `replay` / the
+campaign verdict are all independent of which function occupies this hook --
+only `transcript_evidence` can carry the digest it produces. See
+`PHASE_1_TRANSCRIPT_DIGEST.md`.
+
+If that unit is promoted, every named `primitive_ops` member will have either
+a concrete implementation or an explicit, contract-bound primitive treatment.
+Phase 1 remains open regardless -- `parse_transcript` / capture
+well-formedness, `transcript_stage2_wf`, digest-function correctness,
+artefact binding to the committed model/inference spec, arbitrary-precision
+extraction, and the final closure review are all separate, still-open
+obligations. See `PHASE_1_STATUS.md` for exact, current status.
+

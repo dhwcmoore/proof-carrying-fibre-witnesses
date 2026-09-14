@@ -390,12 +390,53 @@ future work). `ValidationBinding.validate_campaign_valid_completeness`
 (separate theorems, `validate_campaign_pipeline` keeps its three conclusions).
 Entirely UNRELATED to `Orchestration.valid_completeness_certificate_v0` (the
 semantic EXACT-branch check, untouched, still dead code in v0);
-`op_transcript_digest` untouched and
-still OPEN. See `PHASE_1_COMPLETENESS_WELLFORMED.md`. **Reviewer-concurred and
+`op_transcript_digest` untouched at the time and
+was still OPEN. See `PHASE_1_COMPLETENESS_WELLFORMED.md`. **Reviewer-concurred
+and promoted; not a Phase 1 closure.**
+
+**`op_transcript_digest` (2026-09-14, reviewer-concurred by source inspection
+and promoted; revision 3 -- ZIP sha256
+`8b6e3b01533c1f8cfa864a05a36383e2e814ff7b78e7ef42515b24818e5b60ad`).** The
+final `primitive_ops` member. `implementation/rocq/TranscriptDigest.v` (new,
+`Qed`, axiom-free) -- an interface-and-evidence-binding unit, NOT a
+cryptographic implementation: `op_transcript_digest` REMAINS a primitive
+hook; its normative target `digest_v1("pcfw.exec_transcript.v1", to_cv(tr))`
+is an abstract Section `Variable transcript_digest_v1` (F.3). Proves ordinary
+Gallina determinism (`op_transcript_digest_deterministic`) -- explicitly NOT
+collision resistance; different transcripts are NOT required to produce
+different digests. `set_transcript_digest` replaces only this field
+(`set_transcript_digest_field` + `_preserves_others`, all 14 other fields).
+Non-interference: `validate_campaign_indep_of_transcript_digest`,
+`replay_indep_of_transcript_digest` (the FULL `replay_result`, strictly
+stronger than `RecordCrosscheck.set_crosscheck`'s field-wise independence --
+this field affects nothing inside `replay`, not even `record_findings`), and
+`verdict_indep_of_transcript_digest` (via `decide_verdict_indep_of_tev`:
+`decide` never inspects `_ops`/`_tr`/`tev`/`cev`) -- the digest hook records
+which transcript was assessed but cannot manufacture or suppress a witness.
+Evidence binding: `outcome_transcript_evidence` / `typed_digest_of`
+projections with `live_evidence_uses_typed_transcript_digest` /
+`offline_evidence_uses_both_digests` / `live_offline_typed_digest_agree`
+(same typed digest for live vs. well-formed-offline, independent of the
+offline wire digest); conditional on the PER-INPUT `transcript_digest_agrees
+ops tr` premise (never a blanket `forall tr` Hypothesis -- the defect class
+this project has now held twice), `live_evidence_digest_agrees` /
+`offline_evidence_digest_agrees`. Malformed-offline separation:
+`malformed_evidence_uses_only_wire_digest`, `malformed_no_typed_digest`,
+`malformed_assess_indep_of_transcript_digest` (the WHOLE `assess_validated`
+result is `ops`-independent on this branch). `ManifestPipeline.
+pipeline_ops_transcript_digest` (pass-through, unchanged) +
+`pipeline_transcript_digest_agrees`. Harness: `ExtractTranscriptDigest.v`, a
+DEDICATED extraction (`extracted_transcript_digest.ml`) kept separate from
+`extracted_stage2.ml` -- adding `assess_validated` there directly perturbed
+that file's `Orchestration.policy` / `FibreWitnessKernel.Policy` OCaml type
+naming and broke the six existing harnesses; reverted, and this unit's
+extraction is fully isolated instead. `ocaml/test_transcript_digest.ml` uses a
+deterministic MOCK digest (explicitly not SHA-256) over a submission-free
+campaign. See `PHASE_1_TRANSCRIPT_DIGEST.md`. **Reviewer-concurred and
 promoted; not a Phase 1 closure.**
 
-Across `make check`, **133** `Print Assumptions` "Closed under the global
-context"; `coqchk` covers 19 modules; seven `make test` harnesses PASS.
+Across `make check`, **152** `Print Assumptions` "Closed under the global
+context"; `coqchk` covers 20 modules; eight `make test` harnesses PASS.
 Packaging: `make clean` before archiving (source only -- no `*.vo`,
 `extracted_*.ml`, or compiled executables); the `Makefile` locates crypto
 libraries via `opam var lib` with a `?=` override.

@@ -208,11 +208,14 @@ comparison would be strictly finer, but text equality is exact); `policy_hash` /
 B-tier, not needed here); the F.3 decoders (`candidate_id_of`,
 `semantic_digest_of`, the wire parsers) passed in; retrieval integrity.
 
-Still OPEN: `op_transcript_digest`. `op_completeness_wellformed` is now concrete
-(`CompletenessWellformed`, author-reported -- `PHASE_1_COMPLETENESS_WELLFORMED.md`).
+`op_completeness_wellformed` is concrete and reviewer-concurred + promoted
+(`CompletenessWellformed`, r3 -- `PHASE_1_COMPLETENESS_WELLFORMED.md`);
+`op_transcript_digest` has a contract-bound primitive treatment, author-reported
+(`TranscriptDigest`, r3, reviewer-concurred + promoted -- `PHASE_1_TRANSCRIPT_DIGEST.md`; the hook stays
+primitive, its normative digest realisation stays F.3, so it is NOT concrete).
 
-`make check` exits 0: `coqchk` covers **19** modules; across `make check`,
-**133** `Print Assumptions` "Closed under the global context"; **seven**
+`make check` exits 0: `coqchk` covers **20** modules; across `make check`,
+**152** `Print Assumptions` "Closed under the global context"; **eight**
 `make test` harnesses PASS.
 
 Phase 1 remains **open**; Phase 2 is not authorised; this unit is promoted but
