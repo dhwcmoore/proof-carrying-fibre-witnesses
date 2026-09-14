@@ -167,6 +167,14 @@ gap in that environment's `zarith` package. The generated `.ml`/`.mli` themselve
 were not edited and are presumed correct pending a `zarith` install with dev
 interfaces present.
 
+(Update, 2026-09-13: verified end-to-end in the build environment used for
+`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`, whose `zarith` install — the one
+this `Makefile`'s own `OCAML_LIB`/`ZARITH` variables resolve to via `opam var
+lib` — does ship complete `.cmi` interfaces. `ExtractOrchestration.v` needed
+one addition, `ExtrOcamlNativeString` to its import list; the generated
+`.ml`/`.mli` themselves were otherwise correct as presumed. See that document
+for exactly what is now compiled/linked/executed and what remains open.)
+
 ### Follow-up build (this repo): REP1 repair + context-bundle reporting
 
 Applied in this tree and rebuilt with `coqc`/`coqchk`/`coqtop`/`ocamlc` 8.18.0 /
@@ -200,7 +208,8 @@ the new constructor); the hand-written skeleton compiles; `make test` prints
 
 **Still not verified**: linking the Coq-*extracted* OCaml against `zarith` (this
 environment's `zarith` ships no `.cmi` files — an environment gap, not a source
-defect).
+defect). (Update, 2026-09-13: see the note above — verified in a different
+build environment whose `zarith` install has complete `.cmi` files.)
 
 ## Current status (this section only; not updated per Phase 1 unit)
 
@@ -219,7 +228,7 @@ listed above were all discharged in `PHASE_1_ORCHESTRATION_PROOFS.md`; none
 remain `Admitted` in `rocq/Orchestration.v`.
 
 `op_transcript_digest : exec_transcript -> digest`, the last `primitive_ops`
-member, has an **author-reported** (not yet reviewer-concurred, not promoted)
+member, has a **reviewer-concurred and promoted** (revision 3)
 treatment in `rocq/TranscriptDigest.v` -- an interface-and-evidence-binding
 unit, not a cryptographic implementation: it stays a primitive hook (its
 normative target, `digest_v1("pcfw.exec_transcript.v1", to_cv(tr))`, is an
@@ -229,11 +238,12 @@ campaign verdict are all independent of which function occupies this hook --
 only `transcript_evidence` can carry the digest it produces. See
 `PHASE_1_TRANSCRIPT_DIGEST.md`.
 
-If that unit is promoted, every named `primitive_ops` member will have either
-a concrete implementation or an explicit, contract-bound primitive treatment.
-Phase 1 remains open regardless -- `parse_transcript` / capture
-well-formedness, `transcript_stage2_wf`, digest-function correctness,
-artefact binding to the committed model/inference spec, arbitrary-precision
-extraction, and the final closure review are all separate, still-open
-obligations. See `PHASE_1_STATUS.md` for exact, current status.
+Every named `primitive_ops` member now has either a concrete implementation
+or an explicit, contract-bound primitive treatment. Phase 1 remains open
+regardless -- `parse_transcript` / capture well-formedness,
+`transcript_stage2_wf`, digest-function correctness, artefact binding to the
+committed model/inference spec, converting the remaining extractions to
+arbitrary precision (partial -- see `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`),
+and the final closure review are all separate, still-open obligations. See
+`PHASE_1_STATUS.md` for exact, current status.
 

@@ -110,11 +110,35 @@ execution faithfulness.
 > Complete extracted-OCaml compilation, linking and execution with the required
 > arbitrary-precision library.
 
-**OPEN.** Every extraction so far is `Z` / `nat` -> OCaml `int`, explicitly a
-test harness with no overflow-safety guarantee (see each `Extract*.v` header).
-The exact-integer verifier -- `Z` -> an arbitrary-precision type, compiled,
-linked and executed -- is not done. (The verifying environment's `zarith` ships
-no `.cmi` files; this remains an environment gap plus unfinished work.)
+**PARTIAL** -- **reviewer-concurred by source inspection and promoted**
+(revision 1 HELD -- untested candidate-coordinate passage plus two misleading
+scope claims; **revision 2**, ZIP sha256
+`49fa79e16aa44b79c148ae10c78fb5750c5a6878d0b63b94c3de9def1cfe03c8`). Not a
+claim that obligation 3 is complete, and not a Phase 1 closure. The two
+extractions that were dormant since the repository's first
+commit -- `ExtractOrchestration.v` (the central `validate_campaign` /
+`replay` / `decide` / `assess_validated` pipeline) and
+`ExtractFibreWitnessKernel.v` (the T1 kernel) -- already used
+`ExtrOcamlZBigInt` / `ExtrOcamlNatBigInt` but were only ever `coqc`'d, never
+`ocamlc`'d or executed. Both are now genuinely **compiled, linked (against a
+real zarith install with complete `.cmi` interfaces -- see below) and
+executed** by two new harnesses (`test_orchestration_bigint.ml`,
+`test_fibre_witness_kernel_bigint.ml`, wired into the `test:` target),
+exercising `Orchestration.charge`'s fuel arithmetic and `Z`-typed
+candidate/witness coordinate data at magnitudes (~10^29, ~4*10^40) that
+exceed a native 63-bit OCaml `int`'s range. The only Coq-side change needed
+was adding the (previously missing) `ExtrOcamlNativeString` import to
+`ExtractOrchestration.v`. **Residual, explicit**: the other three active
+extractions (`ExtractStage2.v`, `ExtractManifestAuthentication.v`,
+`ExtractTranscriptDigest.v`), which carry the bulk of this project's harness
+coverage, remain native-`int`-only and unaffected -- there is no single build
+running the whole validation pipeline under arbitrary precision. The
+"verifying environment's `zarith` ships no `.cmi` files" claim above did not
+hold for the zarith install this Makefile's own `OCAML_LIB`/`ZARITH`
+variables resolve to on the build environment used for this revision (see
+`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` §2 for exactly what was checked
+and how); this is reported as an observation about that environment, not a
+general claim about the reviewer's. See `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`.
 
 ## Closure-report obligation 4 -- implementation acceptance checks
 
@@ -229,7 +253,8 @@ exercises the extracted matchers.
 
 `make check` exits 0: `coqchk` covers 20 modules;
 across `make check`, **152** `Print Assumptions` "Closed under the global
-context"; eight `make test` harnesses PASS. The validation-tier layer: `ManifestAuthentication` (2.4.1 auth), `ManifestLedger` (`op_ledger_mismatch`), `ManifestAudit` (`op_manifest_audit_matches`), `CampaignRecord` (`op_record_identity_mismatch`), `RecordCrosscheck` (`op_record_crosscheck` -- concrete + `crosscheck_impl_nil_iff` over `Forall2 scr_agrees` + filtered `derive_expected` + advisory-id closure + verdict-invariant; reviewer-concurred + promoted, r17), `CompletenessWellformed` (`op_completeness_wellformed` -- concrete + positive/negative structural characterisations + per-input record-binding premise; reviewer-concurred + promoted, r3), `TranscriptDigest` (`op_transcript_digest` -- a contract-bound primitive (the normative digest realisation stays F.3; the hook itself is not concrete) with a proved non-interference + evidence-binding treatment; reviewer-concurred + promoted, revision 3) -- see the per-unit docs.
+context"; ten `make test` harnesses PASS (eight validation-tier + two
+arbitrary-precision, `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`). The validation-tier layer: `ManifestAuthentication` (2.4.1 auth), `ManifestLedger` (`op_ledger_mismatch`), `ManifestAudit` (`op_manifest_audit_matches`), `CampaignRecord` (`op_record_identity_mismatch`), `RecordCrosscheck` (`op_record_crosscheck` -- concrete + `crosscheck_impl_nil_iff` over `Forall2 scr_agrees` + filtered `derive_expected` + advisory-id closure + verdict-invariant; reviewer-concurred + promoted, r17), `CompletenessWellformed` (`op_completeness_wellformed` -- concrete + positive/negative structural characterisations + per-input record-binding premise; reviewer-concurred + promoted, r3), `TranscriptDigest` (`op_transcript_digest` -- a contract-bound primitive (the normative digest realisation stays F.3; the hook itself is not concrete) with a proved non-interference + evidence-binding treatment; reviewer-concurred + promoted, revision 3) -- see the per-unit docs.
 
 ## Next
 
@@ -239,8 +264,10 @@ r3) an explicit contract-bound primitive treatment. Still open, all separate fro
 `primitive_ops`: `parse_descriptor` / `probe_of_spec` as concrete canonical
 decoders; a maintained Ed25519; `transcript_stage2_wf` and transcript
 faithfulness from a modelled `parse_transcript` / `capture`; `transcript_digest_v1`'s
-concrete canonicaliser + SHA-256 realisation; the arbitrary-precision
-extraction; capture/replay correspondence; canonical encoding; cross-language
-battery; and the final Phase 1 closure review.
+concrete canonicaliser + SHA-256 realisation; converting the other three
+extractions to arbitrary precision (obligation 3 is PARTIAL, not complete --
+see above and `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`); capture/replay
+correspondence; canonical encoding; cross-language battery; and the final
+Phase 1 closure review.
 
 **Phase 1 closure is not appropriate now** and is not proposed.

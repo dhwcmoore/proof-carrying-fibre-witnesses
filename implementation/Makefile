@@ -49,6 +49,14 @@ ocaml:
 	ocamlc -I ocaml -c ocaml/orchestration.ml
 
 test: ocaml rocq
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_fibre_witness_kernel.mli
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_fibre_witness_kernel.ml
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_fibre_witness_kernel.cmo ocaml/test_fibre_witness_kernel_bigint.ml -o ocaml/test_fibre_witness_kernel_bigint
+	./ocaml/test_fibre_witness_kernel_bigint
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_orchestration.mli
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_orchestration.ml
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_orchestration.cmo ocaml/test_orchestration_bigint.ml -o ocaml/test_orchestration_bigint
+	./ocaml/test_orchestration_bigint
 	ocamlc -I ocaml ocaml/orchestration.cmo ocaml/test_context_bundle.ml -o ocaml/test_context_bundle
 	./ocaml/test_context_bundle
 	ocamlc -I ocaml -c ocaml/extracted_stage2.mli
@@ -78,7 +86,7 @@ check-kernel-trust:
 clean:
 	find rocq -type f \( -name '*.vo' -o -name '*.vos' -o -name '*.vok' -o -name '*.glob' -o -name '*.aux' \) -delete
 	find ocaml -type f \( -name '*.cmi' -o -name '*.cmo' -o -name '*.cmx' -o -name '*.o' \) -delete
-	rm -f ocaml/test_context_bundle ocaml/test_stage2 ocaml/test_stage1 ocaml/test_stage1_wrapper ocaml/test_context_resolution ocaml/test_manifest_matching ocaml/test_transcript_digest ocaml/test_manifest_authentication
+	rm -f ocaml/test_context_bundle ocaml/test_stage2 ocaml/test_stage1 ocaml/test_stage1_wrapper ocaml/test_context_resolution ocaml/test_manifest_matching ocaml/test_transcript_digest ocaml/test_manifest_authentication ocaml/test_fibre_witness_kernel_bigint ocaml/test_orchestration_bigint
 	rm -f ocaml/extracted_stage2.ml ocaml/extracted_stage2.mli
 	rm -f ocaml/extracted_transcript_digest.ml ocaml/extracted_transcript_digest.mli
 	rm -f ocaml/extracted_manifest_auth.ml ocaml/extracted_manifest_auth.mli

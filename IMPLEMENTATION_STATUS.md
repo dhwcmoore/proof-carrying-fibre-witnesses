@@ -38,6 +38,13 @@ on each of the six named theorems shows exactly that theorem and nothing else,
 confirming no unintended axioms; the hand-written OCaml skeleton compiles clean.
 Linking the Coq-*extracted* OCaml against `zarith` was not verified — the
 verifying environment's `zarith` install ships no `.cmi` interface files.
+(Update, 2026-09-13: this has since been verified in the build environment
+used for `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` — that environment's
+`zarith` install, the one the Makefile's own `OCAML_LIB`/`ZARITH` variables
+already resolve to, does ship complete `.cmi` files, and both `ExtractOrchestration.v`
+and `ExtractFibreWitnessKernel.v` now compile, link and execute against it.
+This is an observation about that specific environment, not a general claim;
+see that document for what remains unconverted.)
 
 ## REP1 repair + context-bundle addendum
 
@@ -436,14 +443,17 @@ campaign. See `PHASE_1_TRANSCRIPT_DIGEST.md`. **Reviewer-concurred and
 promoted; not a Phase 1 closure.**
 
 Across `make check`, **152** `Print Assumptions` "Closed under the global
-context"; `coqchk` covers 20 modules; eight `make test` harnesses PASS.
+context"; `coqchk` covers 20 modules; ten `make test` harnesses PASS (eight
+validation-tier + two arbitrary-precision, `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`).
 Packaging: `make clean` before archiving (source only -- no `*.vo`,
 `extracted_*.ml`, or compiled executables); the `Makefile` locates crypto
 libraries via `opam var lib` with a `?=` override.
 
 See `PHASE_1_STATUS.md` for the full ledger of the four `PHASE_0_CLOSURE_REPORT.md`
-Phase 1 obligations against current state: obligation 1 done; obligations 2 and 4
-partial; obligation 3 (arbitrary-precision extraction) open. **Phase 1 is open;
+Phase 1 obligations against current state: obligation 1 done; obligations 2, 3,
+and 4 partial (obligation 3, arbitrary-precision extraction, is partial as of
+`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` -- reviewer-concurred and
+promoted, revision 2, not complete). **Phase 1 is open;
 no obligation has been deferred to a later phase; Phase 1 closure is not
 proposed.**
 
@@ -457,8 +467,11 @@ carries no such index, and single-context is instead
 `ContextResolution.stage1_stage2_use_resolved_context`, a theorem, not a
 dependent `resolved_context` field); physical capture/replay correspondence;
 the general `canonical_value` / remaining `to_cv` encoders (campaign-manifest
-rendering + `digest_v1` are concrete); parser/boundary acceptance; extracted-OCaml
-compile/link/execute against a real arbitrary-precision library; the
+rendering + `digest_v1` are concrete); parser/boundary acceptance; converting
+the other three extractions (`ExtractStage2.v`, `ExtractManifestAuthentication.v`,
+`ExtractTranscriptDigest.v`) to arbitrary precision (the central `Orchestration`
+and `FibreWitnessKernel` extractions are now compiled/linked/executed against
+one, `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`); the
 cross-language agreement battery. `Stage1Evidence` propagation is **done** as an
 invariant (`Stage1Invariant.pending_invariant`, carried through `run_stage1` /
 `replay`), not runtime-enforced re-checking. `transcript_faithful_for` stays a
