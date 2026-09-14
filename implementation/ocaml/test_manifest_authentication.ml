@@ -692,6 +692,92 @@ let () =
                          ~budget:"{\"max_candidates\":3,\"max_memory_bytes\":9}"))
                rpl rp2 (cfg_mc 10)));
 
+  (* op_completeness_wellformed_impl (VERDICT_SEMANTICS.md 5 step 9): a pure
+     structural check on the already-typed completeness_status.  Unknown /
+     Incomplete carry no certificate -> unconditionally well-formed. *)
+  assert (A.op_completeness_wellformed_impl A.CompletenessUnknown);
+  assert (A.op_completeness_wellformed_impl A.CompletenessIncomplete);
+  let cert scheme body =
+    A.CompletenessComplete { A.completeness_scheme = scheme; A.completeness_body = body } in
+  (* well-formed: a non-empty scheme (any decoded bytes -- see below) + a body
+     that is exactly one ASCII-wire canonical value *)
+  assert (A.op_completeness_wellformed_impl (cert "scheme-v1" "{\"a\":1}"));
+  assert (A.op_completeness_wellformed_impl (cert "scheme-v1" "true"));
+  assert (A.op_completeness_wellformed_impl (cert "scheme-v1" "\"x\""));
+  (* revision-2 fix: a quote, a backslash, and a raw high byte in a DECODED
+     scheme string are all legitimate data, NOT malformed -- scheme:<string>
+     imposes no further wire grammar (reviewer HOLD on revision 1, blocker 1) *)
+  assert (A.op_completeness_wellformed_impl (cert "sch\"eme" "{\"a\":1}"));
+  assert (A.op_completeness_wellformed_impl (cert "sch\\eme" "{\"a\":1}"));
+  assert (A.op_completeness_wellformed_impl
+            (cert (String.make 1 (Char.chr 233)) "{\"a\":1}"));
+  assert (A.op_completeness_wellformed_impl (cert (String.make 1 (Char.chr 127)) "{\"a\":1}"));
+  (* every remaining failure class: empty scheme (the only scheme-side
+     rejection there is); empty body; body with trailing garbage after one
+     value; body with a leading-zero integer (skip_value's canonical-number
+     grammar); body with duplicate object keys (skip_value's
+     strict-ascending-key grammar); body that isn't JSON at all; a body string
+     containing a raw high byte (still out of v0's ASCII-wire subset -- unlike
+     a bare scheme string, a body STRING still goes through the canonical
+     string grammar) *)
+  assert (not (A.op_completeness_wellformed_impl (cert "" "{\"a\":1}")));
+  assert (not (A.op_completeness_wellformed_impl (cert "scheme-v1" "")));
+  assert (not (A.op_completeness_wellformed_impl (cert "scheme-v1" "5x")));
+  assert (not (A.op_completeness_wellformed_impl (cert "scheme-v1" "01")));
+  assert (not (A.op_completeness_wellformed_impl (cert "scheme-v1" "{\"a\":1,\"a\":2}")));
+  assert (not (A.op_completeness_wellformed_impl (cert "scheme-v1" "not-json")));
+  assert (not (A.op_completeness_wellformed_impl
+                 (cert "scheme-v1" ("\"" ^ String.make 1 (Char.chr 233) ^ "\""))));
+  (* the two structural checks in isolation, matching the Coq normative vectors *)
+  assert (A.wellformed_scheme "scheme-v1");
+  assert (not (A.wellformed_scheme ""));
+  assert (A.wellformed_scheme "sch\"eme");
+  assert (A.wellformed_scheme (String.make 1 (Char.chr 127)));
+  assert (A.wellformed_body "{\"a\":1,\"b\":2}");
+  assert (not (A.wellformed_body ""));
+  assert (not (A.wellformed_body "5x"));
+  assert (not (A.wellformed_body "01"));
+  assert (not (A.wellformed_body "{\"a\":1,\"a\":2}"));
+
+  (* ----- reviewer HOLD on revision 1, blocker 2: the checked value is not
+     bound to `ti.rec.completeness` -----
+
+     parse_record_full_impl NEVER surfaces `completeness` (CampaignRecord.
+     skip_value only syntactically CONSUMES it): two records differing ONLY in
+     their completeness payload decode to the IDENTICAL typed view, and
+     op_completeness_wellformed_impl is evaluated on a SEPARATE value
+     (authenticated_completeness / ti_completeness) with no decoder-level
+     connection to either record's actual bytes.  This is exactly the gap
+     ManifestPipeline.record_completeness_load_validated now states as an
+     explicit F.3 premise (a concrete decoder remains future work). *)
+  let mk_record_c ~completeness ~rr ~budget =
+    "{\"audit_instance_id\":\"ai-0001\",\"campaign_id\":\"cmp-1\"," ^
+    "\"completeness\":" ^ completeness ^ "," ^ cds ^ "," ^
+    "\"manifest_digest\":\"" ^ good_digest ^ "\"," ^
+    "\"policy_hash\":\"" ^ d64 'd' ^ "\"," ^
+    "\"recorded_results\":" ^ rr ^ ",\"resource_budget\":" ^ budget ^ "}" in
+  let rec_unknown =
+    mk_record_c ~completeness:"\"unknown\"" ~rr:"[]" ~budget:"{}" in
+  let rec_complete =
+    mk_record_c
+      ~completeness:"{\"k\":\"complete\",\"v\":{\"body\":\"1\",\"scheme\":\"s\"}}"
+      ~rr:"[]" ~budget:"{}" in
+  (* record says Unknown vs record says Complete -- the typed view is
+     IDENTICAL either way; completeness never reaches it *)
+  assert (A.parse_record_full_impl rec_unknown = A.parse_record_full_impl rec_complete);
+  (* yet a load path could hand op_completeness_wellformed_impl EITHER
+     ti_completeness value for either record's bytes above, and it would
+     accept both -- nothing here ties the accepted typed value to the record
+     it purportedly came from *)
+  assert (A.op_completeness_wellformed_impl A.CompletenessUnknown);       (* for rec_complete's bytes *)
+  assert (A.op_completeness_wellformed_impl (cert "s" "1"));              (* for rec_unknown's bytes *)
+  (* differing schemes / bodies for the SAME "complete" record shape: distinct
+     ti_completeness values are each independently accepted or rejected on
+     their own terms, again with no reference to what any record contains *)
+  assert (A.op_completeness_wellformed_impl (cert "s" "1"));
+  assert (not (A.op_completeness_wellformed_impl (cert "" "1")));
+  assert (not (A.op_completeness_wellformed_impl (cert "s" "not-json")));
+
   print_endline
     "PASS: manifest authentication -- frozen digest 0714f76c; canonical bytes; \
      Ed25519 RFC-8032 TEST 1 + tamper/invalid-point/degenerate-key rejects; \
@@ -713,4 +799,10 @@ let () =
      are filtered from derive_expected (a recorded claim for one -> mismatch); mutation + \
      NotRun-alignment tests run THROUGH parse_record_full_impl; advisory findings lie in \
      the closed 3-id family + advisory budget crosscheck + matching end-to-end \
-     record_crosscheck_impl"
+     record_crosscheck_impl; op_completeness_wellformed_impl Unknown/Incomplete \
+     unconditional + Complete certificate scheme/body well-formedness (revision 2: \
+     quote/backslash/high-byte schemes ACCEPTED, only empty rejected; body still scoped \
+     to the ASCII-wire canonical subset) + every failure class (empty scheme; \
+     empty/trailing-garbage/leading-zero/dup-key/non-JSON/high-byte-string body) + the \
+     record-completeness binding gap demonstrated (identical typed view for differing \
+     completeness payloads)"

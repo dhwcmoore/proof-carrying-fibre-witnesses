@@ -119,13 +119,13 @@ and the analogous premise for the submission list).
 `op_manifest_audit_matches` is likewise concrete (`ManifestAudit`,
 VERDICT_SEMANTICS step 5 -- `PHASE_1_MANIFEST_AUDIT.md`).
 
-Still OPEN: `op_completeness_wellformed`, `op_transcript_digest`.
+Still OPEN: `op_transcript_digest`. `op_completeness_wellformed` is now concrete (`CompletenessWellformed`, author-reported -- `PHASE_1_COMPLETENESS_WELLFORMED.md`).
 (`op_record_identity_mismatch` -- `CampaignRecord` -- and `op_record_crosscheck`
 -- `RecordCrosscheck`, `PHASE_1_RECORD_CROSSCHECK.md` -- are now concrete.)
 
-`make check` exits 0: `coqchk` covers **18** modules (this unit added
+`make check` exits 0: `coqchk` covers **19** modules (this unit added
 `PCFW.ManifestLedger`; the later units added `PCFW.ManifestAudit`,
-`PCFW.CampaignRecord`, `PCFW.RecordCrosscheck`); across `make check`, **121**
+`PCFW.CampaignRecord`, `PCFW.RecordCrosscheck`); across `make check`, **133**
 `Print Assumptions` "Closed under the global context"; **seven** `make test`
 harnesses PASS.
 

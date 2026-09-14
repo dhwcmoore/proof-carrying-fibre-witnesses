@@ -1,4 +1,4 @@
-From PCFW Require Import Stage1 Stage1Invariant Stage1Wrapper ContextResolution PipelineWiring ValidationBinding ManifestMatching CanonicalV1 ManifestAuthentication ManifestLedger ManifestAudit CampaignRecord RecordCrosscheck ManifestPipeline Stage2 Stage2Adapter.
+From PCFW Require Import Stage1 Stage1Invariant Stage1Wrapper ContextResolution PipelineWiring ValidationBinding ManifestMatching CanonicalV1 ManifestAuthentication ManifestLedger ManifestAudit CampaignRecord RecordCrosscheck CompletenessWellformed ManifestPipeline Stage2 Stage2Adapter.
 
 (* stage-1 semantic checker -> adapter hypotheses *)
 Print Assumptions Stage1.stage1_pending_identity.
@@ -131,6 +131,21 @@ Print Assumptions RecordCrosscheck.verdict_decide_ignores_record_findings.
 Print Assumptions RecordCrosscheck.replay_verdict_fields_indep_crosscheck.
 Print Assumptions RecordCrosscheck.assess_validated_verdict_indep_crosscheck.
 Print Assumptions ManifestPipeline.pipeline_verdict_indep_of_crosscheck.
+
+(* concrete op_completeness_wellformed: the structural well-formedness check,
+   its positive/negative characterisations, and the validate_campaign binding *)
+Print Assumptions CompletenessWellformed.wellformed_scheme_true_iff.
+Print Assumptions CompletenessWellformed.wellformed_body_true_iff.
+Print Assumptions CompletenessWellformed.op_completeness_wellformed_impl_true_iff_bool.
+Print Assumptions CompletenessWellformed.op_completeness_wellformed_impl_true_iff.
+Print Assumptions CompletenessWellformed.op_completeness_wellformed_impl_false_iff.
+Print Assumptions CompletenessWellformed.op_completeness_wellformed_impl_false_spec.
+Print Assumptions ValidationBinding.validate_campaign_valid_completeness.
+Print Assumptions ManifestPipeline.validate_campaign_completeness_agrees.
+Print Assumptions ManifestPipeline.validate_campaign_completeness_agrees_bool.
+Print Assumptions ManifestPipeline.validate_campaign_completeness_agrees_structured.
+Print Assumptions ManifestPipeline.validate_campaign_completeness_bound_to_record.
+Print Assumptions ManifestPipeline.validate_campaign_completeness_bound_to_record_structured.
 
 (* The kernel connection: each must print "Closed under the global context". *)
 Print Assumptions Stage2.stage2_valid_checked_witness.

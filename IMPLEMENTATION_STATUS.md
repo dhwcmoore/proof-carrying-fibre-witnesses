@@ -351,8 +351,51 @@ by source inspection and promoted** (reviewer disposition on r13; reviewed r13
 bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`).
 Not a Phase 1 closure.
 
-Across `make check`, **121** `Print Assumptions` "Closed under the global
-context"; `coqchk` covers 18 modules; seven `make test` harnesses PASS.
+**`op_completeness_wellformed` (2026-09-13, reviewer-concurred by source
+inspection and promoted; revision 1 HELD; revision 2 HELD -- blocker 1
+concurred closed, blocker 2 persisted in an unsatisfiable global form;
+**revision 3 reviewer-concurred**, ZIP sha256
+`b4298a2c4f0bdecd7d601a71830bd2e1ecbf1d8cba567f85168f9ade7df3cae3`).**
+`implementation/rocq/CompletenessWellformed.v` (new, `Qed`, axiom-free) makes
+`op_completeness_wellformed` concrete: VERDICT_SEMANTICS §5 step 9 (the LAST
+`validate_campaign` guard) -- a pure structural well-formedness check on the
+already-typed `completeness_status` (no wire decode). Revision 1 was HELD on
+two grounds: (1) it reused `ManifestAuthentication.printable_ascii_id` -- a
+round-trip-THEOREM predicate, never a decoder acceptance gate -- for
+`wellformed_scheme`, wrongly rejecting legitimate decoded strings (a quote, a
+backslash, a raw high byte); FIXED in revision 2, reviewer-concurred:
+`wellformed_scheme` now requires only non-emptiness, and `wellformed_body`'s
+scope to the ASCII-wire canonical subset (via `CampaignRecord.skip_value`) is
+stated honestly, reviewer-concurred as v0's scope (the alternative, a full
+UTF-8-tolerant canonical-value recognizer, is a separate, larger decoder
+unit); an INDEPENDENT specification-level relation `CompletenessWellformed.
+completeness_status_wf` is added, with `op_completeness_wellformed_impl_true_iff`
+stated against it (the Boolean-only form kept as `_true_iff_bool`). (2) the
+checked value (`ti_completeness ti`) had no proven connection to
+`ti.rec.completeness`, the value the governing step actually reads. Revision
+2's fix re-introduced this as an UNSATISFIABLE global Section `Hypothesis`
+(`forall ti, record_completeness_of (ti_record ti) = ti_completeness ti` --
+two `trusted_inputs` can share `ti_record` while differing in
+`ti_completeness`, forcing e.g. `CompletenessUnknown = CompletenessIncomplete`;
+the same defect class as the earlier `ManifestMatching.
+ti_policy_digest_truthful` inconsistency). FIXED in revision 3:
+`record_completeness_load_validated` is now a `Definition ... (ti :
+trusted_inputs) : Prop`, a predicate on ONE input exactly like
+`ManifestMatching.policy_digest_load_validated`, and
+`validate_campaign_completeness_bound_to_record` / `_structured` take it as an
+explicit per-input premise (a concrete completeness decoder remains preferred
+future work). `ValidationBinding.validate_campaign_valid_completeness`
+(standalone) + `ManifestPipeline.validate_campaign_completeness_agrees` /
+`_bool` / `_structured` / `_bound_to_record` / `_bound_to_record_structured`
+(separate theorems, `validate_campaign_pipeline` keeps its three conclusions).
+Entirely UNRELATED to `Orchestration.valid_completeness_certificate_v0` (the
+semantic EXACT-branch check, untouched, still dead code in v0);
+`op_transcript_digest` untouched and
+still OPEN. See `PHASE_1_COMPLETENESS_WELLFORMED.md`. **Reviewer-concurred and
+promoted; not a Phase 1 closure.**
+
+Across `make check`, **133** `Print Assumptions` "Closed under the global
+context"; `coqchk` covers 19 modules; seven `make test` harnesses PASS.
 Packaging: `make clean` before archiving (source only -- no `*.vo`,
 `extracted_*.ml`, or compiled executables); the `Makefile` locates crypto
 libraries via `opam var lib` with a `?=` override.

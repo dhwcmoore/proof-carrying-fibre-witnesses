@@ -16,7 +16,7 @@ Baseline: `PHASE_1_VALIDATION_BINDING.md`. One new module,
 > (`ManifestPipeline.validate_campaign_pipeline`). The "uninterpreted predicate"
 > and "open `op_parse_commitment` / `op_signer_authorised` / `op_signature_valid`"
 > statements below are historical -- see the authentication doc for current
-> status. Current build: `coqchk` 18 modules, **121** `Print Assumptions`
+> status. Current build: `coqchk` 19 modules, **133** `Print Assumptions`
 > "Closed under the global context", seven `make test` harnesses (the later
 > additions are the authentication, `op_ledger_mismatch`,
 > `op_manifest_audit_matches`, and `op_record_identity_mismatch` units --
@@ -143,8 +143,9 @@ table above. Since this unit, `op_parse_commitment` / `op_signer_authorised` /
 `op_signature_valid` (`ManifestAuthentication`), `op_ledger_mismatch`
 (`ManifestLedger`), `op_manifest_audit_matches` (`ManifestAudit`) and
 `op_record_identity_mismatch` (`CampaignRecord`) have all been made concrete.
-`op_completeness_wellformed`, `op_transcript_digest` remain OPEN;
-`op_record_crosscheck` is concrete (`RecordCrosscheck`, verdict-invariant).
+`op_transcript_digest` remains OPEN; `op_record_crosscheck` is concrete
+(`RecordCrosscheck`, verdict-invariant); `op_completeness_wellformed` is concrete
+(`CompletenessWellformed`, author-reported -- `PHASE_1_COMPLETENESS_WELLFORMED.md`).
 
 `make check` exits 0: `coqchk` covers `PCFW.ManifestMatching` (eleven modules);
 across `make check`, **53** `Print Assumptions` "Closed under the global

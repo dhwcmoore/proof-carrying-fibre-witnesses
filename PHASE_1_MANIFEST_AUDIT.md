@@ -103,12 +103,12 @@ New assertions over a rendered schema-valid manifest
 to §2.3 load validation until the policy parser is concrete) and, downstream,
 retrieval integrity.
 
-Still OPEN: `op_completeness_wellformed`, `op_transcript_digest`.
+Still OPEN: `op_transcript_digest`. `op_completeness_wellformed` is now concrete (`CompletenessWellformed`, author-reported -- `PHASE_1_COMPLETENESS_WELLFORMED.md`).
 (`op_record_identity_mismatch` -- `CampaignRecord` -- and `op_record_crosscheck`
 -- `RecordCrosscheck`, `PHASE_1_RECORD_CROSSCHECK.md` -- are now concrete.)
 
-`make check` exits 0: `coqchk` covers **18** modules (adds `PCFW.ManifestAudit`);
-across `make check`, **121** `Print Assumptions` "Closed under the global context";
+`make check` exits 0: `coqchk` covers **19** modules (adds `PCFW.ManifestAudit`);
+across `make check`, **133** `Print Assumptions` "Closed under the global context";
 **seven** `make test` harnesses PASS.
 
 Phase 1 remains **open**; Phase 2 is not authorised. **Reviewer-concurred by source inspection and promoted** as part of the cumulative r5–r13 validation block (reviewer disposition on r13; the reviewed r13 bytes, ZIP sha256 `7691bc1d05d1fb85648da9126372476589acd9971b2decc997c37dd424335419`). Not a Phase 1 closure.

@@ -181,6 +181,44 @@ Proof.
   exists mc. split; [ reflexivity | exact Hrim ].
 Qed.
 
+(* the completeness step (step 9) also passed: op_completeness_wellformed
+   returned true on the trusted-input's completeness status.  Standalone, so
+   the existing valid_guards destructures stay as they are. *)
+Lemma validate_campaign_valid_completeness :
+  forall ops ti ac l0,
+    validate_campaign ops ti = ValidCampaign ac l0 ->
+    op_completeness_wellformed ops (ti_completeness ti) = true.
+Proof.
+  intros ops ti ac l0 H. unfold validate_campaign in H.
+  destruct (charge (validation_seed ti)
+              (commitment_parse_fuel (schedule (ti_config ti)))) as [l1|];
+    [| discriminate].
+  destruct (op_parse_commitment ops (ti_commitment_wire ti)) as [msg | mc];
+    [ discriminate |].
+  destruct (op_signer_authorised ops (ti_config ti) mc) eqn:Hsa;
+    cbn [negb] in H; [| discriminate].
+  destruct (charge l1 (signature_verify_fuel (schedule (ti_config ti)))) as [l2|];
+    [| discriminate].
+  destruct (op_signature_valid ops (ti_config ti) mc (ti_manifest ti)) eqn:Hsv;
+    cbn [negb] in H; [| discriminate].
+  destruct (charge l2 (manifest_bind_fuel (schedule (ti_config ti)))) as [l3|];
+    [| discriminate].
+  destruct (op_manifest_policy_matches ops (ti_manifest ti) ti) eqn:Hpm;
+    cbn [negb] in H; [| discriminate].
+  destruct (op_manifest_audit_matches ops (ti_manifest ti) ti) eqn:Ham;
+    cbn [negb] in H; [| discriminate].
+  destruct (op_manifest_context_matches ops (ti_manifest ti) ti) eqn:Hcm;
+    cbn [negb] in H; [| discriminate].
+  destruct (charge l3 (record_bind_fuel (schedule (ti_config ti)))) as [l4|];
+    [| discriminate].
+  destruct (op_ledger_mismatch ops (ti_manifest ti) (ti_submissions ti))
+    as [i|]; [ discriminate |].
+  destruct (op_record_identity_mismatch ops (ti_record ti) mc (ti_manifest ti) ti)
+    as [field|]; [ discriminate |].
+  destruct (op_completeness_wellformed ops (ti_completeness ti));
+    cbn [negb] in H; [reflexivity | discriminate].
+Qed.
+
 (* ----- contracts scoped to ONE ops ----- *)
 
 Variable ops : primitive_ops.

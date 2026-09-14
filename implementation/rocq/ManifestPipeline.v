@@ -49,12 +49,32 @@
     output is advisory only: [pipeline_verdict_indep_of_crosscheck] shows the
     campaign verdict is unchanged if [op_record_crosscheck] is replaced by any
     other function (VERDICT_SEMANTICS.md 6.5 -- [record_findings] is not read by
-    [decide]). *)
+    [decide]).
+
+    [op_completeness_wellformed] is concrete
+    ([CompletenessWellformed.op_completeness_wellformed_impl], step 9 -- the
+    LAST validate_campaign guard) with a SEPARATE theorem
+    [validate_campaign_completeness_agrees]: success gives the trusted input's
+    completeness status well-formed, per
+    [CompletenessWellformed.op_completeness_wellformed_impl_true_iff] (now
+    stated over the INDEPENDENT [CompletenessWellformed.completeness_status_wf]
+    relation, reviewer revision 2).  This is a pure structural check on the
+    already-typed [completeness_status] -- no wire decode, and no change to
+    [validate_campaign]'s precedence; it is UNRELATED to
+    [Orchestration.valid_completeness_certificate_v0] (the semantic
+    EXACT-branch check, untouched, still dead code in v0).
+
+    [validate_campaign_completeness_bound_to_record] additionally binds the
+    checked value to `ti.rec.completeness` (VERDICT_SEMANTICS.md 5 step 9 reads
+    the RECORD, not an independently-supplied field) via the explicit F.3
+    premise [record_completeness_load_validated], exactly like
+    [ManifestMatching.policy_digest_load_validated] -- reviewer revision 2,
+    blocker 2. *)
 
 From Coq Require Import Bool List String.
 From PCFW Require Import Orchestration CanonicalV1 ValidationBinding
   ManifestMatching ManifestAuthentication ManifestLedger ManifestAudit
-  CampaignRecord RecordCrosscheck.
+  CampaignRecord RecordCrosscheck CompletenessWellformed.
 Import ListNotations.
 
 Section Pipeline.
@@ -92,7 +112,7 @@ Definition pipeline_ops (base : primitive_ops) : primitive_ops :=
     (fun r mc M (_ : trusted_inputs) =>
        CampaignRecord.record_identity_mismatch_impl
          parse_record_impl parse_manifest_impl r mc M)
-    (op_completeness_wellformed a)
+    CompletenessWellformed.op_completeness_wellformed_impl
     (op_stage1_check a)
     (op_preflight a)
     (op_eval_o3 a)
@@ -301,6 +321,110 @@ Proof.
   { rewrite Hac. unfold authenticated_of. cbn. congruence. }
   exists rv, cm. rewrite Hcom.
   repeat split; assumption.
+Qed.
+
+(* ----- completeness well-formedness (VERDICT_SEMANTICS.md 5 step 9), a separate
+   fact -----
+
+   A successful validate_campaign over pipeline_ops means the concrete
+   op_completeness_wellformed_impl returned true on the trusted input's
+   completeness status.  [validate_campaign_pipeline] keeps its three
+   conclusions. *)
+Lemma pipeline_ops_completeness : forall base,
+  op_completeness_wellformed (pipeline_ops base)
+  = CompletenessWellformed.op_completeness_wellformed_impl.
+Proof. reflexivity. Qed.
+
+Theorem validate_campaign_completeness_agrees :
+  forall ti ac l0,
+    validate_campaign (pipeline_ops base) ti = ValidCampaign ac l0 ->
+    CompletenessWellformed.op_completeness_wellformed_impl (ti_completeness ti) = true.
+Proof.
+  intros ti ac l0 H.
+  pose proof (validate_campaign_valid_completeness (pipeline_ops base) ti H) as Hcw.
+  rewrite (pipeline_ops_completeness base) in Hcw. exact Hcw.
+Qed.
+
+(* Boolean-disjunction corollary (supporting): the trusted input's completeness
+   status is Unknown, Incomplete, or a Complete certificate whose scheme and
+   body Booleans both return true. *)
+Theorem validate_campaign_completeness_agrees_bool :
+  forall ti ac l0,
+    validate_campaign (pipeline_ops base) ti = ValidCampaign ac l0 ->
+    ti_completeness ti = CompletenessUnknown \/
+    ti_completeness ti = CompletenessIncomplete \/
+    exists c, ti_completeness ti = CompletenessComplete c /\
+      CompletenessWellformed.wellformed_scheme (completeness_scheme c) = true /\
+      CompletenessWellformed.wellformed_body (completeness_body c) = true.
+Proof.
+  intros ti ac l0 H.
+  apply CompletenessWellformed.op_completeness_wellformed_impl_true_iff_bool.
+  exact (validate_campaign_completeness_agrees ti ac l0 H).
+Qed.
+
+(* structured corollary, over the INDEPENDENT specification-level relation
+   (CompletenessWellformed.completeness_status_wf): the trusted input's
+   completeness status is Unknown, Incomplete, or a Complete certificate whose
+   scheme is non-empty and whose body is exactly one ASCII-wire canonical
+   value. *)
+Theorem validate_campaign_completeness_agrees_structured :
+  forall ti ac l0,
+    validate_campaign (pipeline_ops base) ti = ValidCampaign ac l0 ->
+    CompletenessWellformed.completeness_status_wf (ti_completeness ti).
+Proof.
+  intros ti ac l0 H.
+  apply CompletenessWellformed.op_completeness_wellformed_impl_true_iff.
+  exact (validate_campaign_completeness_agrees ti ac l0 H).
+Qed.
+
+(* ----- binding the checked value to `ti.rec.completeness` (reviewer HOLD,
+   blocker 2) -----
+
+   VERDICT_SEMANTICS.md 5 step 9 reads `ti.rec.completeness`, not an
+   independently-supplied field.  No completeness-status wire decoder exists
+   yet -- `CampaignRecord.skip_value` only SYNTACTICALLY consumes the record's
+   `completeness` field (see its header), never interprets it.
+
+   [record_completeness_of] stands for "the value a completeness decoder would
+   recover from a campaign record" (an abstract denotation, like
+   `ManifestMatching.policy_context_of`).  [record_completeness_load_validated]
+   is a PREDICATE ON ONE INPUT -- exactly
+   `ManifestMatching.policy_digest_load_validated ti`, a `Definition`, NOT a
+   blanket Section `Hypothesis` -- because a `forall ti, record_completeness_of
+   (ti_record ti) = ti_completeness ti` premise is UNSATISFIABLE: two
+   `trusted_inputs` can share `ti_record` while differing in `ti_completeness`
+   (e.g. `Unknown` vs `Incomplete`), forcing those to be equal (reviewer HOLD
+   on r2, blocker 2).  Each theorem below therefore takes
+   `record_completeness_load_validated ti` as an explicit premise, about the
+   one `ti` in play, matching every other per-input F.3 premise in this file.
+   A concrete decoder (PREFERRED, per the reviewer) is future work -- see
+   `PHASE_1_COMPLETENESS_WELLFORMED.md` 5. *)
+Variable record_completeness_of : campaign_record -> completeness_status.
+Definition record_completeness_load_validated (ti : trusted_inputs) : Prop :=
+  record_completeness_of (ti_record ti) = ti_completeness ti.
+
+Theorem validate_campaign_completeness_bound_to_record :
+  forall ti ac l0,
+    record_completeness_load_validated ti ->
+    validate_campaign (pipeline_ops base) ti = ValidCampaign ac l0 ->
+    CompletenessWellformed.op_completeness_wellformed_impl
+      (record_completeness_of (ti_record ti)) = true.
+Proof.
+  intros ti ac l0 Hload H.
+  unfold record_completeness_load_validated in Hload.
+  rewrite Hload.
+  exact (validate_campaign_completeness_agrees ti ac l0 H).
+Qed.
+
+Theorem validate_campaign_completeness_bound_to_record_structured :
+  forall ti ac l0,
+    record_completeness_load_validated ti ->
+    validate_campaign (pipeline_ops base) ti = ValidCampaign ac l0 ->
+    CompletenessWellformed.completeness_status_wf (record_completeness_of (ti_record ti)).
+Proof.
+  intros ti ac l0 Hload H.
+  apply CompletenessWellformed.op_completeness_wellformed_impl_true_iff.
+  exact (validate_campaign_completeness_bound_to_record ti ac l0 Hload H).
 Qed.
 
 (* ----- op_record_crosscheck: concrete, and advisory-only ----- *)
