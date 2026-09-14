@@ -2,9 +2,21 @@
    committed manifest accepted; tampered policy_hash / context digest rejected;
    unparseable manifest rejected.
 
-   digest = string here (see ExtractStage2.v): test harness only. *)
+   digest = string here (see ExtractStage2.v): test harness only.
+
+   Closure-report obligation 3: Z / nat now extract to Big_int_Z.big_int, so
+   `verifier_config`'s numeric fields below are Big_int_Z literals for type
+   correctness -- but `manifest_policy_matches_impl` / `_context_matches_impl`
+   never inspect `trusted_inputs.ti_config` at all (they match on
+   `ti_manifest`/`ti_policy`/`ti_policy_digest`, all strings), so there is no
+   arithmetic or numeric comparison in this file for a beyond-63-bit case to
+   exercise. The genuine numeric-boundary coverage for this Extract*.v lives
+   in test_stage1.ml / test_stage1_wrapper.ml / test_stage2.ml /
+   test_context_resolution.ml. *)
 
 module S = Extracted_stage2
+
+let bi = Big_int_Z.big_int_of_int
 
 let deqb (a : string) (b : string) : bool = a = b
 
@@ -29,12 +41,12 @@ let parse_manifest (m : S.manifest) : S.campaign_manifest_view option =
 let policy_context_of (_p : S.policy0) : S.context_descriptor = committed_ctx
 
 let sched : S.fuel_schedule =
-  { S.commitment_parse_fuel = 0; S.signature_verify_fuel = 0;
-    S.manifest_bind_fuel = 0; S.record_bind_fuel = 0; S.preflight_fuel = 0;
-    S.stage1_base_fuel = 0; S.stage1_per_byte_fuel = 0 }
+  { S.commitment_parse_fuel = bi 0; S.signature_verify_fuel = bi 0;
+    S.manifest_bind_fuel = bi 0; S.record_bind_fuel = bi 0; S.preflight_fuel = bi 0;
+    S.stage1_base_fuel = bi 0; S.stage1_per_byte_fuel = bi 0 }
 let cfg : S.verifier_config =
-  { S.max_candidates = 0; S.max_wire_bytes = 0; S.max_transcript_bytes = 0;
-    S.max_fuel = 0; S.model_call_fuel = 0; S.max_fuel_per_candidate = 0;
+  { S.max_candidates = bi 0; S.max_wire_bytes = bi 0; S.max_transcript_bytes = bi 0;
+    S.max_fuel = bi 0; S.model_call_fuel = bi 0; S.max_fuel_per_candidate = bi 0;
     S.schedule = sched; S.config_trust_anchor = { S.ta_authorised_signers = []; S.ta_keys = [] } }
 
 let ti ~pdigest : S.trusted_inputs =

@@ -59,17 +59,17 @@ test: ocaml rocq
 	./ocaml/test_orchestration_bigint
 	ocamlc -I ocaml ocaml/orchestration.cmo ocaml/test_context_bundle.ml -o ocaml/test_context_bundle
 	./ocaml/test_context_bundle
-	ocamlc -I ocaml -c ocaml/extracted_stage2.mli
-	ocamlc -I ocaml -c ocaml/extracted_stage2.ml
-	ocamlc -I ocaml ocaml/extracted_stage2.cmo ocaml/test_stage2.ml -o ocaml/test_stage2
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_stage2.mli
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_stage2.ml
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_stage2.cmo ocaml/test_stage2.ml -o ocaml/test_stage2
 	./ocaml/test_stage2
-	ocamlc -I ocaml ocaml/extracted_stage2.cmo ocaml/test_stage1.ml -o ocaml/test_stage1
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_stage2.cmo ocaml/test_stage1.ml -o ocaml/test_stage1
 	./ocaml/test_stage1
-	ocamlc -I ocaml ocaml/extracted_stage2.cmo ocaml/test_stage1_wrapper.ml -o ocaml/test_stage1_wrapper
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_stage2.cmo ocaml/test_stage1_wrapper.ml -o ocaml/test_stage1_wrapper
 	./ocaml/test_stage1_wrapper
-	ocamlc -I ocaml ocaml/extracted_stage2.cmo ocaml/test_context_resolution.ml -o ocaml/test_context_resolution
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_stage2.cmo ocaml/test_context_resolution.ml -o ocaml/test_context_resolution
 	./ocaml/test_context_resolution
-	ocamlc -I ocaml ocaml/extracted_stage2.cmo ocaml/test_manifest_matching.ml -o ocaml/test_manifest_matching
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_stage2.cmo ocaml/test_manifest_matching.ml -o ocaml/test_manifest_matching
 	./ocaml/test_manifest_matching
 	ocamlc -I ocaml -c ocaml/extracted_transcript_digest.mli
 	ocamlc -I ocaml -c ocaml/extracted_transcript_digest.ml

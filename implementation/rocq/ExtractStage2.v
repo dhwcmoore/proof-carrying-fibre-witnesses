@@ -1,17 +1,21 @@
-(* Extraction of the concrete stage-2 checker and its Orchestration adapter for
-   an executable exercise ONLY.
+(* Extraction of the concrete stage-2 checker and its Orchestration adapter
+   for an executable exercise.
 
-   Z and nat are extracted to OCaml [int], string to OCaml [string]: this build
-   has no bignum or Coq-string dependency and links directly.
+   Closure-report obligation 3 (arbitrary-precision extracted OCaml): Z and
+   nat extract to Big_int_Z.big_int (Zarith's arbitrary-precision
+   representation), NOT OCaml's native, fixed-width [int] -- unlike this
+   file's own prior revisions (see git history) and unlike the two
+   extractions that remain native-int, ExtractManifestAuthentication.v and
+   ExtractTranscriptDigest.v. string still extracts to OCaml [string]
+   (ExtrOcamlNativeString, unchanged).
 
-   THIS IS NOT THE EXACT-INTEGER VERIFIER.  It carries no overflow-safety
-   guarantee: the machine-int arithmetic here can wrap, unlike the Coq [Z] the
-   proofs are about.  The exact-integer verifier extracts [Z] to an
-   arbitrary-precision type (deferred -- the verifying environment's [zarith]
-   ships no interface files).  Use this extraction to exercise control flow and
-   verdicts, not for any assurance claim. *)
-From Coq Require Import Extraction ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlZInt
-  ExtrOcamlNativeString.
+   Genuinely compiled, linked (against zarith) and EXECUTED by
+   test_stage2.ml, test_stage1.ml, test_stage1_wrapper.ml,
+   test_context_resolution.ml, and test_manifest_matching.ml (Makefile
+   `test:` target). See those harnesses' headers for exactly what is and is
+   not exercised at arbitrary-precision magnitude. *)
+From Coq Require Import Extraction ExtrOcamlBasic ExtrOcamlNatBigInt
+  ExtrOcamlZBigInt ExtrOcamlNativeString.
 From PCFW Require Import Stage1 Stage1Wrapper ContextResolution Stage2 Stage2Adapter
   ManifestMatching.
 

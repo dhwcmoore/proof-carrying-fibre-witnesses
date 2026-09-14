@@ -128,10 +128,35 @@ exercising `Orchestration.charge`'s fuel arithmetic and `Z`-typed
 candidate/witness coordinate data at magnitudes (~10^29, ~4*10^40) that
 exceed a native 63-bit OCaml `int`'s range. The only Coq-side change needed
 was adding the (previously missing) `ExtrOcamlNativeString` import to
-`ExtractOrchestration.v`. **Residual, explicit**: the other three active
-extractions (`ExtractStage2.v`, `ExtractManifestAuthentication.v`,
-`ExtractTranscriptDigest.v`), which carry the bulk of this project's harness
-coverage, remain native-`int`-only and unaffected -- there is no single build
+`ExtractOrchestration.v`.
+
+**Second unit (2026-09-14, reviewer-concurred by source inspection and
+promoted, revision 2, ZIP sha256
+`4c9436442d669224b8595131138215818843f220b0858015f10d81ac7843e230`):**
+`ExtractStage2.v` and its five dependent harnesses (`test_stage2.ml`,
+`test_stage1.ml`, `test_stage1_wrapper.ml`, `test_context_resolution.ml`,
+`test_manifest_matching.ml`) converted from `ExtrOcamlNatInt`/`ExtrOcamlZInt`
+to `ExtrOcamlNatBigInt`/`ExtrOcamlZBigInt`, preserving every pre-existing
+test case's expected result and adding beyond-63-bit cases (C1 equality/
+one-past-boundary; the B5 literal-representability boundary; a valid witness
+with huge positive/negative coordinates; `Stage2Adapter.fuel_ok`'s `4 *
+model_call_fuel <=? max_fuel_per_candidate` at its exact/one-past boundary;
+O3's probe-input/observation equality at its exact/one-past boundary) at
+~4*10^40 / ~10^29 magnitude. `ExtractTranscriptDigest.v` and
+`ExtractManifestAuthentication.v` deliberately untouched (no naming-collision
+risk reintroduced). Revision 1 HELD (an unpreserved test-input claim, three
+scope statements left stale by this unit's own conversion, an unused
+`huge_index` claim); revision 2 (archive `phase1_arbitrary_precision_stage2_r2`)
+addresses all three and is **reviewer-concurred and promoted**. See
+`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` §7 for the full account,
+including the one file (`test_manifest_matching.ml`) where no beyond-63-bit
+case was added, and why.
+
+**Residual, explicit, after both units**: `ExtractManifestAuthentication.v`
+and `ExtractTranscriptDigest.v`, which carry the bulk of this project's
+remaining harness coverage (the manifest/ledger/audit/record/crosscheck
+suite, the Ed25519 signature path, the transcript-digest evidence suite),
+remain native-`int`-only and unaffected -- there is still no single build
 running the whole validation pipeline under arbitrary precision. The
 "verifying environment's `zarith` ships no `.cmi` files" claim above did not
 hold for the zarith install this Makefile's own `OCAML_LIB`/`ZARITH`
@@ -264,10 +289,12 @@ r3) an explicit contract-bound primitive treatment. Still open, all separate fro
 `primitive_ops`: `parse_descriptor` / `probe_of_spec` as concrete canonical
 decoders; a maintained Ed25519; `transcript_stage2_wf` and transcript
 faithfulness from a modelled `parse_transcript` / `capture`; `transcript_digest_v1`'s
-concrete canonicaliser + SHA-256 realisation; converting the other three
-extractions to arbitrary precision (obligation 3 is PARTIAL, not complete --
-see above and `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`); capture/replay
-correspondence; canonical encoding; cross-language battery; and the final
-Phase 1 closure review.
+concrete canonicaliser + SHA-256 realisation; converting the remaining two
+native-int extractions (`ExtractManifestAuthentication.v`,
+`ExtractTranscriptDigest.v`) to arbitrary precision (obligation 3 is
+PARTIAL, not complete -- see above and
+`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`); capture/replay correspondence;
+canonical encoding; cross-language battery; and the final Phase 1 closure
+review.
 
 **Phase 1 closure is not appropriate now** and is not proposed.

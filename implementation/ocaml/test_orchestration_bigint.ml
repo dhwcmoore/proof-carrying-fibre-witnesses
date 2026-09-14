@@ -1,19 +1,21 @@
 (* Closure-report obligation 3 -- extracted-OCaml build against arbitrary
-   precision.  Every pre-existing validation-tier harness in this project
-   (test_stage2.ml, test_stage1.ml, test_stage1_wrapper.ml,
-   test_context_resolution.ml, test_manifest_matching.ml,
-   test_transcript_digest.ml, test_manifest_authentication.ml,
-   test_context_bundle.ml) links against extractions that map Z/nat to
-   native OCaml [int] (ExtractStage2.v / ExtractManifestAuthentication.v /
-   ExtractTranscriptDigest.v / the hand-written orchestration.ml mirror --
-   explicitly NOT the exact-integer verifier, see each header).  This
-   harness instead links against ocaml/extracted_orchestration.ml, produced
-   by ExtractOrchestration.v using ExtrOcamlZBigInt/ExtrOcamlNatBigInt, so
-   every nat/Z field of Orchestration.v (fuel, budgets, indices,
-   candidate/witness coordinates) extracts to Big_int_Z.big_int -- true
-   arbitrary precision, not merely a wider fixed-width int.  Its companion
-   is test_fibre_witness_kernel_bigint.ml, against the other arbitrary-
-   precision extraction, ExtractFibreWitnessKernel.v.
+   precision.  Three of this project's harness families link against
+   extractions that map Z/nat to native OCaml [int]: test_transcript_digest.ml
+   (ExtractTranscriptDigest.v), test_manifest_authentication.ml
+   (ExtractManifestAuthentication.v), and test_context_bundle.ml (the
+   hand-written orchestration.ml mirror) -- explicitly NOT the exact-integer
+   verifier, see each header. (test_stage2.ml, test_stage1.ml,
+   test_stage1_wrapper.ml, test_context_resolution.ml, and
+   test_manifest_matching.ml, against ExtractStage2.v, are ALSO now
+   arbitrary-precision -- see that file's header.)  This harness instead
+   links against ocaml/extracted_orchestration.ml, produced by
+   ExtractOrchestration.v using ExtrOcamlZBigInt/ExtrOcamlNatBigInt, so every
+   nat/Z field of Orchestration.v (fuel, budgets, indices, candidate/witness
+   coordinates) extracts to Big_int_Z.big_int -- true arbitrary precision,
+   not merely a wider fixed-width int.  Its companion is
+   test_fibre_witness_kernel_bigint.ml, against the other arbitrary-
+   precision extraction sharing this file's original revision,
+   ExtractFibreWitnessKernel.v.
 
    It exercises the REAL exported entry points (validate_campaign,
    assess_validated) with values that exceed the range of a native 63-bit
@@ -31,13 +33,14 @@
         magnitudes (~10^40, both positive and negative) a native int could
         not even represent as a literal.
 
-   This is NOT a replacement for the machine-int harnesses' stage-1/stage-2
-   boundary-condition coverage (O6a-O6d, C1-C4, etc.) -- that coverage
-   already exists against extracted_stage2.ml and is unaffected by this
-   file. This harness's sole job is arbitrary-precision fidelity of the
-   extraction itself, exercised through genuine calls to the real
-   Orchestration entry points, compiled and linked against zarith and
-   actually executed (not merely coqc'd, per the closure-report wording). *)
+   This is NOT a replacement for extracted_stage2.ml's own stage-1/stage-2
+   boundary-condition coverage (O6a-O6d, C1-C5, etc., now also exercised at
+   arbitrary-precision magnitude by test_stage2.ml et al. -- see those
+   files) and is unaffected by this file. This harness's sole job is
+   arbitrary-precision fidelity of the Orchestration-level entry points
+   themselves, exercised through genuine calls to the real Orchestration
+   entry points, compiled and linked against zarith and actually executed
+   (not merely coqc'd, per the closure-report wording). *)
 
 module S = Extracted_orchestration
 

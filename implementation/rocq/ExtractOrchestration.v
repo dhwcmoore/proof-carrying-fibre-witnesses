@@ -4,12 +4,12 @@
 
     Z and nat extract to Big_int_Z.big_int (Zarith's arbitrary-precision
     representation), NOT OCaml's native, fixed-width [int]. This is ONE OF
-    TWO arbitrary-precision extractions in the project -- the other is
-    ExtractFibreWitnessKernel.v (also ExtrOcamlZBigInt / ExtrOcamlNatBigInt).
-    The remaining three active extractions -- ExtractStage2.v,
-    ExtractManifestAuthentication.v, ExtractTranscriptDigest.v -- use
-    ExtrOcamlNatInt / ExtrOcamlZInt and say so in their own headers; for
-    those, fuel/budget/index/candidate-coordinate values remain silently
+    THREE arbitrary-precision extractions in the project -- the other two
+    are ExtractFibreWitnessKernel.v and ExtractStage2.v (all three
+    ExtrOcamlZBigInt / ExtrOcamlNatBigInt). The remaining two active
+    extractions -- ExtractManifestAuthentication.v, ExtractTranscriptDigest.v
+    -- use ExtrOcamlNatInt / ExtrOcamlZInt and say so in their own headers;
+    for those, fuel/budget/index/candidate-coordinate values remain silently
     bounded by machine word size.
 
     Genuinely compiled, linked and EXECUTED against zarith by

@@ -452,8 +452,11 @@ libraries via `opam var lib` with a `?=` override.
 See `PHASE_1_STATUS.md` for the full ledger of the four `PHASE_0_CLOSURE_REPORT.md`
 Phase 1 obligations against current state: obligation 1 done; obligations 2, 3,
 and 4 partial (obligation 3, arbitrary-precision extraction, is partial as of
-`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` -- reviewer-concurred and
-promoted, revision 2, not complete). **Phase 1 is open;
+`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` -- first unit, `ExtractOrchestration.v`
++ `ExtractFibreWitnessKernel.v`, reviewer-concurred and promoted, revision 2;
+second unit, `ExtractStage2.v` + its five harnesses, also reviewer-concurred
+and promoted, revision 2; `ExtractManifestAuthentication.v`/`ExtractTranscriptDigest.v`
+still native-int either way -- not complete). **Phase 1 is open;
 no obligation has been deferred to a later phase; Phase 1 closure is not
 proposed.**
 
@@ -468,11 +471,12 @@ carries no such index, and single-context is instead
 dependent `resolved_context` field); physical capture/replay correspondence;
 the general `canonical_value` / remaining `to_cv` encoders (campaign-manifest
 rendering + `digest_v1` are concrete); parser/boundary acceptance; converting
-the other three extractions (`ExtractStage2.v`, `ExtractManifestAuthentication.v`,
-`ExtractTranscriptDigest.v`) to arbitrary precision (the central `Orchestration`
-and `FibreWitnessKernel` extractions are now compiled/linked/executed against
-one, `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`); the
-cross-language agreement battery. `Stage1Evidence` propagation is **done** as an
+`ExtractManifestAuthentication.v` and `ExtractTranscriptDigest.v` to
+arbitrary precision (the central `Orchestration`/`FibreWitnessKernel`
+extractions and `ExtractStage2.v` + its five harnesses are all now
+compiled/linked/executed against one, both reviewer-concurred and promoted
+-- `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`); the cross-language
+agreement battery. `Stage1Evidence` propagation is **done** as an
 invariant (`Stage1Invariant.pending_invariant`, carried through `run_stage1` /
 `replay`), not runtime-enforced re-checking. `transcript_faithful_for` stays a
 stated F.3 assumption by design.
