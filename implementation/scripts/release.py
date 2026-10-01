@@ -14,6 +14,7 @@ import audit
 import differential
 import byte_vectors
 import policy_surface
+import integer_surface
 
 
 ROOT = audit.IMPL.parent
@@ -98,8 +99,7 @@ def validate_check_log(text, data, harnesses):
 
 
 def validate_numeric_evidence(integers, compared, data):
-    if integers["result"] != "PASS" or integers["extracted_module_count"] != len(data["extraction_modules"]) or integers["native_int_extracted_interface_count"] != 0:
-        raise audit.AuditError("integer evidence is incomplete")
+    integer_surface.validate_evidence(integers, data)
     cases = differential.cases()
     recorded = compared["cases"]
     if compared["result"] != "PASS" or compared["case_count"] != len(cases) or len(recorded) != len(cases):
@@ -194,6 +194,7 @@ def main():
             raise audit.AuditError("typed integration harness missing")
         summary.update(integer_structural_audit_result="PASS",
                        exact_integer_extracted_module_count=integers["extracted_module_count"],
+                       extraction_root_count=integers["extracted_root_count"],
                        native_int_extracted_interface_count=integers["native_int_extracted_interface_count"],
                        historical_native_demo_count=integers["historical_native_demo_count"],
                        normative_wrapper_count=integers["normative_wrapper_count"],

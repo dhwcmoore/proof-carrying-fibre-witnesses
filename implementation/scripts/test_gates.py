@@ -270,8 +270,8 @@ class IntegerAndDifferentialGateTests(unittest.TestCase):
         direct=sum(c['oracle_kind'].startswith('actual Gallina') for c in cases)
         evidence={'result':'PASS','case_count':len(cases),'cases':recorded,
                   'actual_Gallina_case_count':direct,'reference_Z_case_count':len(cases)-direct}
-        integers={'result':'PASS','extracted_module_count':1,'native_int_extracted_interface_count':0}
-        data={'extraction_modules':['ExtractFixture']}
+        data=audit.inventory()
+        integers=integer_surface.evidence(*integer_surface.inventory(data))
         release.validate_numeric_evidence(integers,evidence,data)
         missing=copy.deepcopy(evidence);missing['cases']=[]
         wrong=copy.deepcopy(evidence);wrong['cases'][0]['ocaml_result']='wrong'
@@ -293,6 +293,169 @@ class IntegerAndDifferentialGateTests(unittest.TestCase):
             with self.assertRaises(audit.AuditError):differential.compare(['2'],actual,fixture)
         differential.compare(['2'],['2'],fixture)
         self.assertEqual(fixture[0]['result'],'PASS')
+
+
+class ExtractionInventoryTests(unittest.TestCase):
+    def setUp(self):
+        self.formal = audit.inventory()
+        self.valid = integer_surface.evidence(*integer_surface.inventory(self.formal))
+        cases = differential.cases()
+        direct = sum(c['oracle_kind'].startswith('actual Gallina') for c in cases)
+        self.compared = {'result':'PASS','case_count':len(cases),
+                         'cases':[dict(c, result='PASS', oracle_result='fixture', ocaml_result='fixture') for c in cases],
+                         'actual_Gallina_case_count':direct,'reference_Z_case_count':len(cases)-direct}
+
+    def assert_inventory_rejected(self, bad):
+        with self.assertRaises(audit.AuditError):
+            integer_surface.validate_evidence(bad, self.formal)
+        with self.assertRaises(audit.AuditError):
+            release.validate_numeric_evidence(bad, self.compared, self.formal)
+
+    def test_qualified_roots_and_nested_comments(self):
+        output = 'ocaml/extracted_fixture.ml'
+        self.assertEqual(integer_surface.parse_extraction(
+            f'Extraction "{output}" Vector.of_list.', 'fixture'),
+            (output, ['Vector.of_list']))
+        self.assertEqual(integer_surface.parse_extraction(
+            f'Extraction Language OCaml. Extraction "{output}" Vector.of_list.', 'fixture'),
+            (output, ['Vector.of_list']))
+        text = ('From Coq Require Import Extraction.\n'
+                '(* Extraction "ocaml/extracted_fake.ml" Fake.root. (* nested *) *)\n'
+                'Definition text := "Extraction".\n'
+                'Extraction Language OCaml.\n'
+                f'Extraction "{output}"\n'
+                ' Vector.of_list (* ignored (* nested *) roots *) Vector.to_list\n'
+                ' Module.Sub.root final_root.\n')
+        self.assertEqual(integer_surface.parse_extraction(text, 'fixture'),
+                         (output, ['Vector.of_list','Vector.to_list','Module.Sub.root','final_root']))
+
+    def test_current_six_units_against_driver_text(self):
+        extracted = [row for row in self.valid['modules'] if row['category']==1]
+        self.assertEqual(len(extracted), 6)
+        self.assertEqual({Path(row['driver']).stem for row in extracted}, set(self.formal['extraction_modules']))
+        for row in extracted:
+            with self.subTest(driver=row['driver']):
+                # Independent source truth for the six actual commands: remove
+                # only the final terminator, never periods inside root names.
+                text = (audit.IMPL.parent / row['driver']).read_text()
+                command = text.rsplit('\nExtraction "', 1)[1]
+                output, payload = command.split('"', 1)
+                self.assertTrue(payload.rstrip().endswith('.'))
+                roots = payload.strip()[:-1].split()
+                self.assertTrue(roots)
+                self.assertEqual(row['output'], 'implementation/'+output)
+                self.assertEqual(row['module'], Path(output).stem)
+                self.assertEqual(row['extracted_roots'], roots)
+                self.assertEqual(row['extracted_root_count'], len(roots))
+        self.assertEqual(self.valid['extracted_root_count'], sum(row['extracted_root_count'] for row in extracted))
+
+    def test_all_current_stage2_roots(self):
+        expected = ['stage2_check','o_reason_of_fail','fuel_ok','Vector.of_list','Vector.to_list',
+                    'adapter_stage2_check','stage1_semantic_check','op_stage1_wrapper','wire_parse',
+                    'preflight_check','eval_o3_check','resolve','descriptor_eqb',
+                    'manifest_policy_matches_impl','manifest_context_matches_impl']
+        row = next(row for row in self.valid['modules'] if row['module']=='extracted_stage2')
+        self.assertEqual(row['extracted_roots'], expected)
+        self.assertEqual(row['extracted_root_count'], 15)
+
+    def test_current_valid_module_and_root_inventories(self):
+        integer_surface.validate_evidence(self.valid, self.formal)
+        release.validate_numeric_evidence(self.valid, self.compared, self.formal)
+        reordered = copy.deepcopy(self.valid)
+        reordered['modules'].reverse()
+        integer_surface.validate_evidence(reordered, self.formal)
+        release.validate_numeric_evidence(reordered, self.compared, self.formal)
+
+    def test_unsupported_extraction_syntax_rejected(self):
+        prefix = 'Extraction "ocaml/extracted_fixture.ml" '
+        failures = ['(* no actual command *)', prefix+'.', prefix+'Vector.of_list',
+                    prefix+'Vector.of_list Vector.of_list.', prefix+'Vector..of_list.',
+                    prefix+'(Vector.of_list).', prefix+'Vector.of_list "hidden".',
+                    prefix+'Vector.of_list.unknown', prefix+'Vector.of_list.\n'+prefix+'other.',
+                    prefix+'Vector.of_list. '+prefix+'other.',
+                    'Extraction "../escape.ml" Vector.of_list.',
+                    prefix+'Vector.of_list (* unterminated']
+        for text in failures:
+            with self.subTest(text=text), self.assertRaises(audit.AuditError):
+                integer_surface.parse_extraction(text, 'fixture')
+
+    def test_root_inventory_corruption_rejected(self):
+        for kind in ('truncated qualified root','missing root','extra root','invented root at same count',
+                     'duplicate root','empty roots','wrong root count','malformed roots'):
+            bad = copy.deepcopy(self.valid)
+            row = next(row for row in bad['modules'] if row['module']=='extracted_stage2')
+            roots = row['extracted_roots']
+            if kind=='truncated qualified root': roots[3]='Vector'
+            elif kind=='missing root': roots.pop()
+            elif kind=='extra root': roots.append('Invented.root')
+            elif kind=='invented root at same count': roots[-1]='Invented.root'
+            elif kind=='duplicate root': roots[-1]=roots[3]
+            elif kind=='empty roots': row['extracted_roots']=[]
+            elif kind=='wrong root count': row['extracted_root_count']+=1
+            else: row['extracted_roots']='Vector.of_list'
+            with self.subTest(kind=kind): self.assert_inventory_rejected(bad)
+
+    def test_module_inventory_corruption_rejected(self):
+        for kind in ('empty modules','omitted extraction unit','extra module','duplicate module',
+                     'wrong driver','wrong output','invented module','missing fields','malformed row'):
+            bad = copy.deepcopy(self.valid)
+            if kind=='empty modules': bad['modules']=[]
+            elif kind=='omitted extraction unit': bad['modules'].pop(0)
+            elif kind=='extra module': bad['modules'].append(dict(bad['modules'][0],module='invented'))
+            elif kind=='duplicate module': bad['modules'][1]=copy.deepcopy(bad['modules'][0])
+            elif kind=='wrong driver': bad['modules'][0]['driver']='implementation/rocq/ExtractStage2.v'
+            elif kind=='wrong output': bad['modules'][0]['output']='implementation/ocaml/extracted_stage2.ml'
+            elif kind=='invented module': bad['modules'][0]['module']='invented'
+            elif kind=='missing fields': del bad['modules'][0]['extracted_roots']
+            else: bad['modules'][0]=None
+            with self.subTest(kind=kind): self.assert_inventory_rejected(bad)
+
+    def test_malformed_evidence_and_counts_rejected(self):
+        failures = [None, [], {}, dict(self.valid,modules=None), dict(self.valid,result='FAILED')]
+        for key in ('extracted_module_count','extracted_root_count','normative_wrapper_count',
+                    'historical_native_demo_count','native_int_extracted_interface_count'):
+            failures.extend((dict(self.valid,**{key:self.valid[key]+1}),
+                             dict(self.valid,**{key:str(self.valid[key])})))
+        failures.append(dict(self.valid,native_int_extracted_interface_count=False))
+        for key, value in (('category',True),('extracted_root_count','4'),('mapping_trusted',1)):
+            bad = copy.deepcopy(self.valid)
+            bad['modules'][0][key]=value
+            failures.append(bad)
+        for bad in failures:
+            with self.subTest(bad=bad): self.assert_inventory_rejected(bad)
+
+    def test_missing_or_omitted_driver_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            impl = Path(directory)
+            (impl/'rocq').mkdir()
+            with self.assertRaises(audit.AuditError):
+                integer_surface.inventory({'extraction_modules':['ExtractMissing']},impl)
+        for modules in ([],self.formal['extraction_modules'][:-1],
+                        self.formal['extraction_modules']+[self.formal['extraction_modules'][0]]):
+            with self.subTest(modules=modules), self.assertRaises(audit.AuditError):
+                integer_surface.validate_evidence(self.valid,dict(self.formal,extraction_modules=modules))
+
+    def test_changed_driver_source_invalidates_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            impl = Path(directory)/'implementation'
+            (impl/'rocq').mkdir(parents=True)
+            (impl/'ocaml').mkdir()
+            driver = impl/'rocq/ExtractFixture.v'
+            text = ('From Coq Require Import Extraction ExtrOcamlNatBigInt ExtrOcamlZBigInt.\n'
+                    'Extraction Language OCaml.\n'
+                    'Extraction "ocaml/extracted_fixture.ml" Module.first Module.second.\n')
+            driver.write_text(text)
+            for name in ('extracted_fixture.ml','extracted_fixture.mli','orchestration.ml','orchestration.mli'):
+                (impl/'ocaml'/name).write_text('')
+            formal = {'extraction_modules':['ExtractFixture']}
+            recorded = integer_surface.evidence(*integer_surface.inventory(formal,impl))
+            integer_surface.validate_evidence(recorded,formal,impl)
+            driver.write_text(text.replace('Module.second','Module.changed'))
+            with self.assertRaises(audit.AuditError):
+                integer_surface.validate_evidence(recorded,formal,impl)
+            driver.unlink()
+            with self.assertRaises(audit.AuditError):
+                integer_surface.validate_evidence(recorded,formal,impl)
 
 
 class ByteVectorGateTests(unittest.TestCase):
