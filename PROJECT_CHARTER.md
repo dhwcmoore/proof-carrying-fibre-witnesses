@@ -1,5 +1,13 @@
 # Project Charter
 
+> Historical design/specification status (Closure Batch 5): current Phase-1
+> release scope is **PARAMETRIC**; see [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md).
+> `SyntheticTargetV0`, `rounddiv`, positive-width concrete quantisation,
+> a no-clamping/no-saturation concrete quantiser and a closed target registry
+> below are design specifications, not implemented Phase-1 release features.
+> Arbitrary byte-to-functional-policy loading is outside that release scope.
+> The preserved specification body does not constitute current implementation evidence.
+
 **Working title:** Proof-Carrying Fibre Witnesses for Learned Observation Regimes
 **Deliverable:** Phase 0, Unit 0A
 **Status:** Draft for Unit 0G ratification. **Revision 14** — §4.3 `(T2)` over `assess_validated` (`loaded_context` threaded through capture/replay; `transcript_source` keeps entry-point provenance), verbatim from `CLAIM_AND_DEFINITIONS.md` §6.3. §4.2:

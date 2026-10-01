@@ -1,5 +1,13 @@
 # Audit Policy and Evidence Obligations
 
+> Historical design/specification status (Closure Batch 5): current Phase-1
+> release scope is **PARAMETRIC**; see [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md).
+> `SyntheticTargetV0`, `rounddiv`, positive-width concrete quantisation,
+> a no-clamping/no-saturation concrete quantiser and a closed target registry
+> below are design specifications, not implemented Phase-1 release features.
+> Arbitrary byte-to-functional-policy loading is outside that release scope.
+> The preserved specification body does not constitute current implementation evidence.
+
 **Deliverable:** Phase 0, Unit 0E
 **Status:** Draft for Unit 0G ratification. **Revision 15** — §2.2 gains encodings
 for the new `campaign_obstruction` `"inconsistent_context_bundle"` and

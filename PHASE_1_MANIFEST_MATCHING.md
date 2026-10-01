@@ -1,5 +1,12 @@
 # Phase 1 -- concrete manifest-matching primitives; the two `ValidationBinding` contracts replaced
 
+> Historical evidence: this report preserves the pre-Batch-5 interfaces and
+> acceptance boundary. Batch 5 replaces their universal policy digest injectivity
+> with explicit local `policy_binding` and adopts a parametric release.
+> The earlier injectivity/semantic-loader blocker below is superseded; absence
+> of a concrete semantic loader is **NOT IN PHASE-1 SCOPE**. See
+> [TRUST.md](TRUST.md) and [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md).
+
 Date: 2026-09-07 (revised same day after reviewer defects; further revised
 2026-09-08 by the authentication unit)
 Baseline: `PHASE_1_VALIDATION_BINDING.md`. One new module,

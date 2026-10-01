@@ -1,5 +1,33 @@
 # Phase 1 status ledger
 
+**Current release boundary (Closure Batch 5, 2026-10-01): PARAMETRIC. Phase 1
+is OPEN; Phase 2 is unauthorised.** [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md)
+now governs acceptance. The broader historical Phase-0 closure work list below
+is superseded where it required concrete semantic policy interpretation; this
+change is an explicit scope decision, not completion of those design features.
+
+The seven formerly digest-injectivity-dependent declarations now take explicit
+local `policy_binding p_committed ti` (`ti_policy ti = p_committed`). No universal
+policy digest injectivity remains in their interfaces. Hash checks remain separate.
+Policy realisation of supplied `Policy`/`AuditContext` is an external semantic
+contract; `faithful_transcript` remains a distinct unresolved/external contract.
+A concrete semantic loader, target registry, `SyntheticTargetV0`, `rounddiv` and
+concrete positive-width/no-clamping quantisation are outside Phase-1 scope.
+Their absence is not a release blocker.
+
+`make check` and `make release` include complete assumption inspection and the
+seven-interface gate. Generated release evidence declares `PARAMETRIC` and loader
+`NOT_IN_PHASE1_SCOPE` while keeping **OPEN / NOT YET CLOSED**. Batch 5 changes
+no extraction mapping, runtime algorithm, capture/replay or faithfulness contract.
+It issues no reviewer concurrence or final closure disposition. See
+[TRUST.md](TRUST.md) and [NONCLAIMS.md](NONCLAIMS.md).
+
+## Historical unit acceptance ledger
+
+The following dated criteria, evidence and reviewer dispositions retain their
+original scope. References to injectivity or semantic-loader blockers describe
+the earlier interfaces and acceptance boundary, superseded above.
+
 Date: 2026-09-06
 Authoritative acceptance criteria: the **"Open Phase 1 work"** list in
 `PHASE_0_CLOSURE_REPORT.md`. `PROJECT_CHARTER.md` §7 defines the v0 *claim*

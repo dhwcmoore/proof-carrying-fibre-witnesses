@@ -1,5 +1,13 @@
 # Claim and Definitions
 
+> Historical design/specification status (Closure Batch 5): current Phase-1
+> release scope is **PARAMETRIC**; see [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md).
+> `SyntheticTargetV0`, `rounddiv`, positive-width concrete quantisation,
+> a no-clamping/no-saturation concrete quantiser and a closed target registry
+> below are design specifications, not implemented Phase-1 release features.
+> Arbitrary byte-to-functional-policy loading is outside that release scope.
+> The preserved specification body does not constitute current implementation evidence.
+
 **Deliverable:** Phase 0, Unit 0B
 **Status:** Draft for Unit 0G ratification. **Revision 14** — `assessment_outcome`
 carries a `certificate` in every constructor. `loaded_context` is an explicit

@@ -1,176 +1,157 @@
 # Current Phase-1 trust account
 
-Phase 1 is **OPEN**. This document describes implementation evidence as of
-Closure Batch 3 (2026-10-01). [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) remains the
-normative trust specification; descriptions there of capture and the intended
-compiled-execution assurance strategy are not evidence that those mechanisms
-have been completed. [PHASE_1_STATUS.md](PHASE_1_STATUS.md) records open work.
+**Phase 1 is OPEN; policy mode is PARAMETRIC (Closure Batch 5, 2026-10-01).**
+The public claim is conditional on a supplied semantic `Policy`, supplied
+`AuditContext`, local policy binding and the existing validation/evidence
+contracts. [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md) governs this release scope.
+The broader designs in [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) and the Phase-0
+specifications are historical specifications, not evidence of implemented capture,
+concrete quantisation, target registration or arbitrary semantic policy loading.
 
-## Kernel checks and release surface
+## KERNEL-CHECKED
 
-`make check` compiles the modules listed in `implementation/_CoqProject`,
-regenerates the six extractions, and explicitly runs `coqchk` on all substantive
-modules. Extraction drivers are compiled but are not explicit `coqchk` targets.
+`make check` compiles the project-owned modules listed in
+`implementation/_CoqProject`, regenerates extraction and runs `coqchk` on every
+substantive module. Extraction drivers are compiled but are not explicit `coqchk`
+targets. Kernel witness, orchestration, Stage-1/Stage-2 and binding results retain
+their exact premises and conclusions; the v0 `EXACT` branch remains unreachable.
 
-The assumption release surface includes **every Theorem, Lemma, Corollary,
-Proposition, Fact, Remark and Example declaration** in the substantive modules,
-including helper results. The existing `Print*Assumptions.v` requests are also
-retained as inspection requirements: a stale request fails rather than vanishing
-from coverage. The release inventory verifies that compilation and `coqchk`
-coverage match `_CoqProject` and that every existing OCaml harness is run.
+The assumption release surface includes every `Theorem`, `Lemma`, `Corollary`,
+`Proposition`, `Fact`, `Remark` and `Example` in substantive modules, including
+helpers. Legacy `Print*Assumptions.v` requests remain inspection requirements:
+a stale name fails. The original lists selected 152 of the 311 declarations at
+`ec8d7900935d7286ea4d175f420ad796df2ed6cc`; the others were omitted helpers.
+Current counts and names are generated in `release-audit/inventory.json`, rather
+than fixed to those historical counts.
 
-The pre-Batch-1 lists selected 152 obligations, all contained in the 311
-theorem-like declarations found at the baseline SHA
-`ec8d7900935d7286ea4d175f420ad796df2ed6cc`. The other 159 were supporting results
-omitted from those lists. The new count is discovered from source, not fixed at
-311. `implementation/release-audit/inventory.json` names the inspected surface.
+Inspection compiles a temporary `.v` file using `coqc`. Every requested name must
+produce exactly one marked `Closed under the global context` response. Process
+failure, errors, missing/duplicate responses and unexpected axioms fail the gate.
+The source gate scans only the project-owned Rocq inventory, blanking nested
+comments and strings; it rejects `Admitted`, `admit`, `Axiom`, `Parameter` and
+plural declaration forms. `Hypothesis` and `Variable` are inventoried separately.
+Generated OCaml, libraries and historical delivery packages are not source inputs.
 
-Inspection uses a generated temporary `.v` file compiled by `coqc`. Each requested
-declaration must produce exactly one marked `Closed under the global context`
-response. Nonzero exit, errors, missing/duplicate responses and unexpected axiom
-reports fail the gate. The old unchecked `coqtop` invocation is no longer used.
+Kernel closure means no global logical axioms remain. It does not discharge
+quantified parameters, implications or generalised section hypotheses. Theorem
+premises remain theorem premises. In particular, `policy_binding p_committed ti`
+is transparently **`ti_policy ti = p_committed`**, supplied for one input. The seven
+formerly injectivity-dependent interfaces now use it, without a universal policy
+hash-injectivity premise. Their conclusions are unchanged; the policy-only
+conclusion restates the supplied equality. Validation does not construct binding.
+The gate kernel-typechecks all seven exact interfaces, including parameter order.
 
-The source gate scans only the project-owned `implementation/rocq` source
-inventory, with nested comments and strings blanked. It rejects `Admitted`,
-`admit`, `Axiom`, `Parameter` and their plural declaration forms. Libraries,
-extracted OCaml and historical delivery packages are not source-gate inputs.
-`Hypothesis` and `Variable` declarations are inventoried separately.
+Separate results prove manifest-policy digest agreement from parsing and the
+matcher, and from successful validation with that matcher wired in. Neither
+result constructs policy identity. `digest_agreement_does_not_bind_policy` gives
+an abstract constant-digest example with truthful digest fields, matching hashes
+and unequal policy tokens; it is not a SHA-256 collision.
 
-## Premises are not discharged by closure
+## EXECUTABLE-CHECKED
 
-Kernel closure says that a result has no remaining global logical axioms. It does
-not establish its quantified parameters, implications or generalised section
-hypotheses for an executable assessment. Important remaining premises include:
+Existing harnesses exercise validation, authentication, record/completeness and
+cross-checks, transcript evidence, context handling and witness control flow.
+The integrated pipeline harness has an empty-campaign boundary; its model,
+candidate-parser, context-execution and capture callbacks are unused. This is
+not an executed full learned-model/witness pipeline.
 
-- faithful model/preprocessing realisation of committed artifact bytes;
-- descriptor/probe/parser and policy-loader correctness;
-- digest comparison contracts, authenticated-object retrieval and per-input
-  policy/completeness load validation;
-- candidate well-formedness, transcript shape and observation-binding premises;
-- F.3 `faithful_transcript tr ctx`, represented by slot/transcript faithfulness
-  premises in the Stage-2 connection. It remains unresolved. Repeatability and
-  input-correctness checks do not establish it.
+All normative extractions use `ExtrOcamlNatBigInt` / `ExtrOcamlZBigInt` and Zarith
+`Big_int_Z.big_int`. The structural OCaml AST gate rejects native `int` interface
+types and historical orchestration-mirror imports/linking. The finite differential
+battery distinguishes actual Gallina cases from exact `Z` reference cases for
+huge naturals. It does not evaluate huge unary-natural Gallina parsers or prove
+general executable equivalence. See the historical
+[Batch-2 evidence](PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md).
 
-`policy_payload_digest_injective` is a formal premise in the manifest binding
-results. It must not be described as a proved property of SHA-256 or inferred
-from collision resistance. Closure Batches 1–3 do not change that premise. Universal SHA-256 injectivity
-on the unbounded policy-string domain is not a valid instantiation: SHA-256 has a
-finite output range. The abstract formal contract is consistent (the existing
-consistency example uses a string-valued injective function), but concrete
-SHA-backed policy-equality claims under this theorem remain blocked. The new
-byte adapter checks literal committed-policy byte equality instead; it does not
-reformulate the theorem or discharge its premise.
+`ocaml/phase1_bytes.ml` is a hand-written, unproved bounded ASCII-wire adapter.
+It reuses extracted manifest/record/string checks; canonical-tree decoding,
+completeness interpretation, transcript schema mapping and descriptor loading
+remain trusted wrapper code. Successful full-tree decoding re-encodes identically;
+exact schemas check unknown/missing fields, ordering, whitespace and numerals.
+Non-ASCII input is rejected and nesting defaults to 128. This is narrower than
+the historical Unicode language; full operational-config byte loading is absent.
 
-## Extraction, implementation and compiler trust
+Completeness is derived from the same record bytes. Complete scheme/body are
+retained; Incomplete limitations survive only in raw bytes, because the typed
+constructor is payload-free. The abstract `record_completeness_of` / per-input
+load-validation premise remains. Independently supplied typed fields remain
+possible through raw APIs. No semantic certificate registry is added.
 
-All current extraction units use `ExtrOcamlNatBigInt` and `ExtrOcamlZBigInt`,
-with the kernel's Zarith `Big_int_Z.big_int` representation: kernel,
-orchestration, Stage-1/Stage-2, manifest/authentication, transcript-digest, and
-one shared closure for the existing Phase-1 pipeline builder. The structural
-OCaml AST gate rejects native `int` types in regenerated interfaces. Counts,
-roots and numeric signature fields are generated in
-`implementation/release-audit/integer-correspondence.json`.
+Descriptor and immutable supplied model/preprocessing/inference snapshots are
+checked against tagged digests and the supplied manifest descriptor. Canonical
+policy bytes are checked against independently supplied committed bytes and their
+tagged digest. These checks establish tested byte identity and digest agreement,
+not functional `Policy` realisation or authoritative object retrieval.
 
-Exactness is conditional on the Rocq domains: extracted `nat` values must be
-nonnegative, and `positive` values positive. Raw `Big_int_Z` types do not enforce
-these refinements. Fixture input conversions reject negative naturals; the
-existing decimal record decoder rejects negative syntax. Arbitrary callers must
-preserve these invariants. The byte adapter checks its nat inputs; complete production schema/domain and
-parser correctness are not established.
-No fixed-width truncation is used for semantic counters, budgets, indices or
-coordinates. Resource exhaustion remains possible; bigint does not promise
-unlimited memory or stack.
+The transcript adapter checks the event-array schema, tags, natural-number keys,
+caller-supplied vector dimensions, byte limits and exact re-encoding. It preserves
+raw-wire digest evidence on both branches. The schema has no context identifier:
+syntactic validity cannot establish transcript/context identity. The hook hashes
+`pcfw.exec_transcript.v1 || 0x1f || canonical bytes`; independent Python vectors
+check tested encodings, inputs and digests. The Gallina `transcript_digest_v1` /
+`to_cv` contract is still abstract for this wrapper. The old mock digest harness
+remains an interface regression. See [Batch-3 evidence](PHASE_1_BYTE_BINDING.md).
 
-The historical `ocaml/orchestration.ml` mirror retains native integers and reduced
-records, without a correspondence proof. It is explicitly non-normative and is
-excluded from compilation/linking by the release gate. The context regression
-now uses extraction. Host byte/bit/string/list utilities still use bounded native
-integers, including the unchanged test crypto fixture; they do not implement
-unbounded semantic counters.
+## POLICY-REALISATION PREMISE
 
-The finite differential battery compares small actual Gallina functions and
-signed `Z` values, plus labelled exact `Z` reference cases for enormous natural
-arithmetic/decimal values. Those reference cases do not evaluate the full
-Gallina unary-natural parser or fuel function at enormous magnitudes. Passing
-differential tests demonstrate agreement on those cases. They are not a general
-correspondence theorem. The integrated harness exercises an empty typed campaign,
-real existing authentication, record checks and exact fuel. Batch 3 adds an
-offline byte path with derived record completeness, descriptor/snapshot checks
-and a concrete ASCII transcript digest hook. Model, candidate-parser, formal
-context-execution and capture hooks remain unused;
-a full model/witness pipeline is still outstanding.
+`FibreWitnessKernel.Policy` contains supplied total `domainb`, `quantise` and
+`target` functions. `AuditContext` adds supplied `preproc` and `model` functions
+and contains `context_policy`. Their intended external-specification realisation
+is an external semantic contract. No Phase-1 loader interprets arbitrary policy
+bytes into those functions; no concrete target registry or quantiser is required
+by this parametric release.
 
-Extraction mappings, Coq extraction, OCaml compilation/linking, Zarith/C bindings
-and build tools remain trusted. See
-[PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md](PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md)
-for the reproduced former overflow failures and exact test boundaries.
+The distinct lowercase `Orchestration.policy` is an opaque string token.
+`policy_binding` equates that token with a selected committed token; it does not
+by itself equate functional policies or establish their realisation. Callers must
+supply the token/semantic-context association and truthful metadata callbacks,
+including `policy_context_of`, `policy_audit_instance_id_of`, and relevant
+`committed_context_wf`/load contracts. Stage-1/Stage-2 wiring closes over the same
+supplied `C`; it does not verify where that `C` came from.
 
-## Parser, I/O, transcript and cryptographic trust
+Raw extracted APIs retain caller-supplied semantic inputs and callbacks, with
+logical premises erased. Even an accepted byte payload plus a successful
+`validate_campaign` is insufficient to infer the caller's token or functional
+policy is the intended committed policy. This batch changes proofs and the
+claim boundary, not runtime enforcement of that association.
 
-Canonical manifest rendering and ASCII-wire record/manifest decoding have
-formal results and test vectors. `ocaml/phase1_bytes.ml` adds a **hand-written,
-unproved, bounded ASCII-wire adapter**. It reuses the extracted string decoder
-and record/manifest checks; canonical-tree parsing, completeness interpretation,
-transcript schema mapping and descriptor loading in this wrapper are trusted
-implementation code, not new Gallina results. See
-[PHASE_1_BYTE_BINDING.md](PHASE_1_BYTE_BINDING.md) for the full boundary inventory.
+## TRANSCRIPT-FAITHFULNESS PREMISE
 
-Within that adapter, successful full canonical-tree decoding must re-encode to
-identical bytes. Exact schemas reject unknown/missing fields and noncanonical
-order/whitespace/numerals; semantic integers are bigint. Raw non-ASCII text is
-rejected, so this is narrower than the normative Unicode language. The default
-host parser nesting bound is 128; full operational-config byte loading is absent.
+F.3 `faithful_transcript tr ctx` and the slot/transcript realisation premises in
+the Stage-2 connection remain unresolved/external. The explicit kernel
+`ObservationBinding` premises connect supplied observations to the supplied
+context, not to independently verified external events. Repeatability, parsing,
+hashing, input checks and replay do not establish observation truth or capture
+faithfulness. No capture/replay implementation or faithfulness contract changes
+in Batch 5. This premise is distinct from policy realisation.
 
-Completeness is derived from the same record bytes before assigning
-`ti_completeness`. Unknown/Incomplete/Complete are interpreted; complete scheme
-and canonical body are retained. Incomplete limitations survive in raw record
-bytes but are absent from the formal payload-free Incomplete constructor. Old
-extracted APIs still accept independently supplied typed fields. The abstract
-`record_completeness_of`/per-input loader premise remains: no formal correctness
-proof of the new wrapper is supplied. No semantic certificate registry is added;
-EXACT remains disabled.
+## IMPLEMENTATION TRUST
 
-Descriptor fields and immutable supplied model/preprocessing/inference snapshots
-are checked against tagged digests and the supplied manifest descriptor. Literal
-canonical policy bytes are checked against independently supplied committed bytes
-and their tagged digest. This is **opaque byte identity**, not §2.3 policy semantic
-loading, registry conformance, inference/probe decoding, or model realisation.
-There is no file-fetch/authority loader or proof connecting these callbacks to
-kernel policy semantics.
+Coq extraction and its mappings, OCaml compilation/linking, Zarith/C bindings,
+`sha`, the existing test-fixture Ed25519 implementation, runtime and build tools
+remain trusted. Frozen/RFC vectors and rejection tests do not prove cryptographic
+security. Digest comparison truth (`eqb = true -> equality of digest strings`)
+is a different contract from hash injectivity; digest determinism proves neither
+collision resistance nor authentication.
 
-The transcript adapter atomically decodes the published event-array schema,
-checks tags/nat keys, vector dimensions supplied by its caller, byte limits and
-exact re-encoding. It preserves raw-wire digest evidence on both result branches.
-It does not derive dimensions from a verified semantic policy loader or prove
-`transcript_stage2_wf`. The schema contains no context identifier; syntactic
-validity cannot distinguish same-shaped transcripts from different contexts.
+Extracted `nat` values must be nonnegative and `positive` values positive. Raw
+bigint types do not enforce these refinements. Fixture conversions and the byte
+adapter check relevant natural inputs; arbitrary callers must preserve domain
+and vector invariants. Bigint prevents fixed-width semantic truncation, but not
+resource exhaustion. Host byte/string utilities still use bounded native indices.
+The retained native-integer orchestration mirror is non-normative and excluded
+from required execution.
 
-The new hook hashes exactly `pcfw.exec_transcript.v1 || 0x1f || canonical bytes`
-using the existing SHA implementation; independent Python vectors check tested
-bytes and digests. The Gallina `transcript_digest_v1`/`to_cv` contract remains
-abstract and unproved for this wrapper. The old colliding mock harness is retained
-as a separate interface regression. Digest determinism proves neither collision
-resistance nor authentication. Transcript hashing/parsing establishes no
-faithfulness. Capture/replay, candidate parsing and full Unicode/schema conformance
-remain open.
+Canonical-tree parsing, record interpretation, descriptor/probe/parser conformance,
+`to_cv`, config/key/authority loading, filesystem retrieval, OS behaviour, runner
+behaviour and signing-key custody retain their stated implementation or environment
+contracts. No general correspondence proof connects all handwritten adapters to
+Gallina. The source manifest detects changes against recorded bytes; it is not
+an authenticated release signature.
 
-The manifest harness links the existing `sha` library and unchanged shared test
-Ed25519 fixture. Tests do not prove cryptographic security; Batch 3 changes no
-cryptographic algorithm.
-
-The manifest harness links the `sha` library and a shared test-fixture OCaml Ed25519
-implementation. Frozen/RFC vectors and rejection tests do not prove those
-implementations secure. Batch 2 moves the existing fixture unchanged; no cryptographic algorithm changes.
-
-Filesystem retrieval, OS/runtime behaviour, runner behaviour and signing-key
-custody remain environmental trust. The source manifest detects changes relative
-to its recorded bytes; it is not itself an authenticated release signature.
-
-## Process evidence
-
-`make release` verifies the manifest, cleans, runs the existing full check, and
-rechecks the manifest. It records the commit SHA, dirty working-tree status,
-manifest digest, compiler versions and mechanically generated counts. A passing
-run always records **OPEN / NOT YET CLOSED**. It is a clean local check in the
-recorded environment, not a byte-identical rebuild result or proof of dependency
-reproducibility. No complete CI workflow or dependency lock is established here.
+`make release` verifies the manifest, cleans, runs the full check and rechecks the
+manifest. It records the base SHA, dirty status, manifest digest, tool versions
+and generated counts, with policy mode `PARAMETRIC` and semantic loader status
+`NOT_IN_PHASE1_SCOPE`. Passing always records **OPEN / NOT YET CLOSED**. This is
+local build evidence, not byte-identical dependency reproducibility; CI/dependency
+locking and final premise/trust acceptance remain review work.

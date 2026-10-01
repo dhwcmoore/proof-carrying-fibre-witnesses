@@ -1,4 +1,4 @@
-.PHONY: check rocq ocaml check-kernel-trust check-source-trust assumptions test clean gate-tests release integer-audit differential byte-vectors
+.PHONY: check rocq ocaml check-kernel-trust check-source-trust assumptions test clean gate-tests release integer-audit differential byte-vectors policy-audit
 
 # Keep inspection after compilation, including when the caller uses make -j.
 .NOTPARALLEL:
@@ -11,7 +11,7 @@ ZARITH ?= $(OCAML_LIB)/zarith
 SHALIB ?= $(OCAML_LIB)/sha
 export OCAML_LIB ZARITH SHALIB
 
-check: check-source-trust rocq ocaml assumptions test integer-audit differential byte-vectors
+check: check-source-trust rocq ocaml assumptions policy-audit test integer-audit differential byte-vectors
 
 rocq:
 	coqc -Q rocq PCFW rocq/FibreWitnessKernel.v
@@ -45,6 +45,9 @@ rocq:
 
 assumptions: check-source-trust rocq
 	python3 scripts/audit.py assumptions
+
+policy-audit: rocq
+	python3 scripts/policy_surface.py
 
 ocaml: rocq
 	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_orchestration.mli

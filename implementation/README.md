@@ -1,7 +1,9 @@
 # Phase-1 implementation and verification
 
-This directory pins the orchestration algebra that Revision 14 expressed as
-pseudocode. It is intentionally small enough to review as code.
+**Phase 1 is OPEN; policy mode is PARAMETRIC (Closure Batch 5).** Results
+are relative to supplied semantic inputs and explicit premises. Current scope is
+[RELEASE_CRITERIA.md](../RELEASE_CRITERIA.md); Phase 2 is unauthorised.
+This directory implements the orchestration algebra introduced in Revision 14.
 
 ## What is real
 
@@ -37,8 +39,36 @@ The functions encode these decisions directly:
 `primitive_ops` is the typed boundary for parsing, signature verification,
 hashing, the stage-1 and stage-2 semantic checks, O1/O2, O3, record
 cross-checking and certificate/report construction. Each member is a total
-function. Phase 1 must replace each member with its implementation and prove its
-contract.
+function. Current members have concrete or contract-bound treatments; external
+semantic and implementation contracts remain explicit under the parametric
+release. Their historical design targets are not all concrete release features.
+
+## Caller-supplied semantic API boundary
+
+The kernel's exported `Policy` contains supplied `domainb`, `quantise` and `target`
+functions. `AuditContext` contains that functional policy plus `preproc` and
+`model`. Kernel `T1` consumes a supplied `P`; `A1`, Stage-1/Stage-2, the adapter
+and `PipelineWiring.wired_ops` consume a supplied `C` (with `P = context_policy C`).
+No current loader derives these functions from arbitrary canonical policy bytes.
+Policy/specification and committed-context realisation are external contracts.
+
+The lowercase `Orchestration.policy` used in the signatures above is instead an
+opaque string token. `ManifestPipeline.pipeline_ops` takes policy metadata
+callbacks and a caller-supplied `base`; `ExtractPhase1Integration.v` exports that
+builder plus validation/assessment and evidence functions. This extraction does
+not install `wired_ops` or reconstruct a functional `C`. Callers composing the
+layers must preserve the association between the chosen token, supplied `C` and
+intended external policy. They must also respect the stated parser, context,
+observation, bigint-domain and callback contracts.
+
+`ManifestMatching.policy_binding p_committed ti` is transparently
+`ti_policy ti = p_committed`. The seven repaired theorem interfaces require this
+local premise; hashes do not establish it. Raw OCaml APIs retain caller-supplied
+inputs/callbacks while proof premises are erased. Successful validation or literal
+policy-byte equality alone does not certify that semantic association. The separate
+F.3 transcript-faithfulness premise remains unresolved. See [TRUST.md](../TRUST.md).
+`SyntheticTargetV0`, `rounddiv`, positive-width/no-clamping concrete quantisation
+and a closed target registry are historical specifications outside this release.
 
 ## Current proof status and historical REP1 repair
 
@@ -70,8 +100,8 @@ Two supporting repairs:
   index value from `op_stage1_check` is trusted.
 - **Stage-2 witness-index contract.** `stage2_witness_index_contract ops` states
   that a `ValidWitness w` returned by `op_stage2_check` for `ps` has
-  `witness_index w = pending_index ps`. Phase 1 must discharge it for the real
-  `op_stage2_check`.
+  `witness_index w = pending_index ps`. The supplied/extracted
+  `op_stage2_check` must meet this contract; the adapter proves it for its supplied `C`.
 
 ## Totality case: `CtxNotNeeded` with pending candidates — resolved
 
@@ -120,9 +150,11 @@ make check
 
 `make release` verifies the source manifest, cleans and runs the full existing
 check. The generated summary in `release-audit/summary.json` records current
-counts and **OPEN / NOT YET CLOSED**. All substantive theorem-like declarations
+counts, `policy_mode: PARAMETRIC`, semantic loader `NOT_IN_PHASE1_SCOPE`
+and **OPEN / NOT YET CLOSED**. All substantive theorem-like declarations
 and legacy requested obligations are inspected by a generated `coqc` audit;
-errors, missing inspections and global axioms fail the build. The old unchecked
+errors, missing inspections and global axioms fail the build. The policy-interface
+gate kernel-typechecks the seven local-binding signatures. The old unchecked
 `coqtop` calls have been removed. See [TRUST.md](../TRUST.md) and
 [RELEASE_CRITERIA.md](../RELEASE_CRITERIA.md). `make gate-tests` exercises the
 new gates using temporary fixtures.
@@ -214,7 +246,8 @@ uniformly abstract: every validation-tier member EXCEPT `op_transcript_digest`
 `rocq/*.v` module wired into `ManifestPipeline.pipeline_ops`
 (`ManifestAuthentication`, `ManifestLedger`, `ManifestAudit`,
 `CampaignRecord`, `RecordCrosscheck`, `CompletenessWellformed`) -- see
-`PHASE_1_STATUS.md`, the authoritative, kept current per-unit ledger, for
+`PHASE_1_STATUS.md`, whose dated unit dispositions are preserved separately
+from its current Batch-5 release-boundary update, for
 exact status and reviewer disposition of each.
 `op_stage1_check` / `op_preflight` / `op_eval_o3` / `op_stage2_check` are
 concrete and wired (`Stage1Wrapper`, `ContextResolution`, `Stage2Adapter`,
@@ -233,14 +266,12 @@ campaign verdict are all independent of which function occupies this hook --
 only `transcript_evidence` can carry the digest it produces. See
 `PHASE_1_TRANSCRIPT_DIGEST.md`.
 
-Every named `primitive_ops` member now has either a concrete implementation
-or an explicit, contract-bound primitive treatment. Phase 1 remains open
-regardless -- `parse_transcript` / capture well-formedness,
-`transcript_stage2_wf`, digest-function correctness, artefact binding to the
-committed model/inference spec, full model/witness integration beyond the
-Batch-2 empty typed campaign test,
-and the final closure review are all separate, still-open obligations. See
-`PHASE_1_STATUS.md` for exact, current status.
+Every named `primitive_ops` member has a concrete or contract-bound treatment.
+Phase 1 remains OPEN pending final parametric closure review. Parser/capture
+shape, digest-function correctness, artifact/context association and observation
+faithfulness retain their stated premises. The empty integrated campaign does
+not demonstrate full model/witness execution. Current acceptance criteria and
+residuals are in [RELEASE_CRITERIA.md](../RELEASE_CRITERIA.md).
 
 
 ## Current byte adapter (Closure Batch 3)
@@ -251,4 +282,5 @@ parser/digest-input builder. `make check` runs its adversarial harness and indep
 Python byte vectors. The integration remains submission-free and uses opaque
 policy bytes; it does not implement §2.3 semantic loading or model/capture code.
 See [the complete boundary inventory](../PHASE_1_BYTE_BINDING.md) and
-[TRUST.md](../TRUST.md). No existing Rocq source or theorem statement changes.
+[TRUST.md](../TRUST.md). That Batch-3 adapter work changed no Rocq statement; Batch 5 separately repairs
+the seven policy-binding theorem interfaces.

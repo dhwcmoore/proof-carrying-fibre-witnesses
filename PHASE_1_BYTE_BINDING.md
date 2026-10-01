@@ -1,5 +1,12 @@
 # Phase-1 Closure Batch 3: concrete bytes and retained loader contracts
 
+> Historical evidence: this report preserves the pre-Batch-5 interfaces and
+> acceptance boundary. Batch 5 replaces their universal policy digest injectivity
+> with explicit local `policy_binding` and adopts a parametric release.
+> The earlier injectivity/semantic-loader blocker below is superseded; absence
+> of a concrete semantic loader is **NOT IN PHASE-1 SCOPE**. See
+> [TRUST.md](TRUST.md) and [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md).
+
 2026-10-01. **Phase 1 OPEN / NOT YET CLOSED; Phase 2 unauthorised.**
 This is implementation evidence awaiting review, not a closure disposition.
 PCFW verifies claim conditions relative to a formally specified learned

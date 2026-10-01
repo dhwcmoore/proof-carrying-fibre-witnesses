@@ -17,6 +17,7 @@ import release
 import differential
 import integer_surface
 import byte_vectors
+import policy_surface
 
 
 class AuditTests(unittest.TestCase):
@@ -154,6 +155,7 @@ class ReleaseTests(unittest.TestCase):
         data = {"compiled_modules": ["M", "ExtractM"], "release_set": ["M.ok"], "extraction_modules": ["ExtractM"]}
         lines = ["coqc -Q rocq PCFW rocq/M.v", "coqc -Q rocq PCFW rocq/ExtractM.v",
                  "Modules were successfully checked", "PASS: 1 release declarations inspected; no global axioms",
+                 f"PASS: {len(policy_surface.INTERFACES)} parametric policy interfaces checked; explicit local binding",
                  "PASS: project source token audit; 0 section-premise declarations inventoried separately",
                  "./ocaml/test_fixture",
                  "PASS: integer structural audit; 1 extracted interfaces; no native int or historical mirror dependency",
@@ -189,6 +191,48 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(summary["verification_status"], "FAILED")
             self.assertEqual(summary["release_status"], "OPEN / NOT YET CLOSED")
             self.assertEqual(summary["failed_stage"], "manifest")
+            self.assertEqual(summary["policy_mode"], "PARAMETRIC")
+            self.assertEqual(summary["concrete_semantic_policy_loader"], "NOT_IN_PHASE1_SCOPE")
+
+
+class PolicyInterfaceTests(unittest.TestCase):
+    def test_current_seven_interfaces(self):
+        with redirect_stdout(io.StringIO()):
+            policy_surface.check_interfaces()
+
+    def test_real_extra_premise_and_missing_declaration_rejected(self):
+        # Compile both versions; the old interface is rejected even if the
+        # universal premise is renamed. No project source is mutated.
+        with tempfile.TemporaryDirectory(prefix="pcfw-policy-negative-") as directory:
+            impl = Path(directory)
+            (impl / "rocq").mkdir()
+            module = impl / "rocq" / "Fixture.v"
+            preamble = "From PCFW Require Import Fixture.\nGoal forall x, binding x = (x = 0). Proof. intros. reflexivity. Qed.\nSection InterfaceChecks."
+            expected = {"Fixture.iface": "(@iface : forall x : nat, binding x -> x = 0)"}
+            good = "Definition binding (x : nat) := x = 0.\nLemma iface : forall x, binding x -> x = 0. Proof. auto. Qed.\n"
+            extra = "Definition binding (x : nat) := x = 0.\nLemma iface : forall h : nat -> nat, (forall p q, h p = h q -> p = q) -> forall x, binding x -> x = 0. Proof. intros h renamed x H. exact H. Qed.\n"
+            strengthened = "Definition binding (x : nat) := x = 0 /\\ True.\nLemma iface : forall x, binding x -> x = 0. Proof. intros x [H _]. exact H. Qed.\n"
+            for text, fails in ((good, False), (extra, True), (strengthened, True), (good, False)):
+                module.write_text(text)
+                subprocess.run(["coqc", "-Q", "rocq", "PCFW", str(module)],
+                               cwd=impl, check=True, capture_output=True)
+                if fails:
+                    with self.assertRaises(audit.AuditError):
+                        policy_surface.check_interfaces(impl, expected, preamble)
+                else:
+                    with redirect_stdout(io.StringIO()):
+                        policy_surface.check_interfaces(impl, expected, preamble)
+            with self.assertRaises(audit.AuditError):
+                policy_surface.check_interfaces(impl, {"missing": "@Missing"}, preamble)
+
+    def test_exit_zero_errors_and_incomplete_evidence(self):
+        good = "PCFW_POLICY_CHECKED:Fixture.iface\n"
+        policy_surface.validate_result(subprocess.CompletedProcess([], 0, good, ""), ["Fixture.iface"])
+        for status, stdout, stderr in ((0, good, "Error: broken check"),
+                                       (0, good, "Anomaly: failure"), (0, "", ""),
+                                       (0, good + good, ""), (1, good, "")):
+            with self.subTest(status=status, stdout=stdout, stderr=stderr), self.assertRaises(audit.AuditError):
+                policy_surface.validate_result(subprocess.CompletedProcess([], status, stdout, stderr), ["Fixture.iface"])
 
 
 class IntegerAndDifferentialGateTests(unittest.TestCase):

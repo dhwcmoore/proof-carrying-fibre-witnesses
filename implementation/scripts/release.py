@@ -13,6 +13,7 @@ import sys
 import audit
 import differential
 import byte_vectors
+import policy_surface
 
 
 ROOT = audit.IMPL.parent
@@ -72,6 +73,9 @@ def validate_check_log(text, data, harnesses):
     inspected = re.findall(r"^PASS: (\d+) release declarations inspected; no global axioms$", text, re.M)
     if inspected != [str(len(data["release_set"]))]:
         raise audit.AuditError("check log does not confirm the complete assumption audit")
+    policy_checks = re.findall(r"^PASS: (\d+) parametric policy interfaces checked; explicit local binding$", text, re.M)
+    if policy_checks != [str(len(policy_surface.INTERFACES))]:
+        raise audit.AuditError("check log does not confirm the parametric policy interfaces")
     if len(re.findall(r"^PASS: project source token audit;", text, re.M)) != 1:
         raise audit.AuditError("check log does not confirm the source token audit")
     integer = re.findall(r"^PASS: integer structural audit; (\d+) extracted interfaces; no native int or historical mirror dependency$", text, re.M)
@@ -132,7 +136,9 @@ def main():
                "harness_result": "NOT_RUN", "manifest_verification_result": "NOT_RUN",
                "integer_structural_audit_result": "NOT_RUN", "differential_result": "NOT_RUN",
                "integration_harness_result": "NOT_RUN", "byte_boundary_result": "NOT_RUN",
-               "byte_vector_result": "NOT_RUN"}
+               "byte_vector_result": "NOT_RUN", "policy_interface_result": "NOT_RUN",
+               "policy_interface_audit_count": None, "policy_mode": "PARAMETRIC",
+               "concrete_semantic_policy_loader": "NOT_IN_PHASE1_SCOPE"}
     # Invalidate any previous passing summary before starting required checks.
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")
     stage = "metadata"
@@ -167,7 +173,9 @@ def main():
         run_make("check", OUTPUT / "check.log")
         stage = "check evidence"
         validate_check_log((OUTPUT / "check.log").read_text(), data, harnesses)
-        summary.update(coqchk_result="PASS", assumption_audit_result="PASS", harness_result="PASS")
+        summary.update(coqchk_result="PASS", assumption_audit_result="PASS", harness_result="PASS",
+                       policy_interface_result="PASS",
+                       policy_interface_audit_count=len(policy_surface.INTERFACES))
         integers = json.loads((OUTPUT / "integer-correspondence.json").read_text())
         compared = json.loads((OUTPUT / "differential.json").read_text())
         validate_numeric_evidence(integers, compared, data)
@@ -180,7 +188,7 @@ def main():
         summary.update(byte_boundary_result="PASS", byte_boundary_case_count=int(byte_count[0]),
                        byte_vector_result="PASS", byte_vector_count=byte_evidence["vector_count"],
                        byte_adapter_formally_verified=False,
-                       policy_semantic_loader_result="NOT_IMPLEMENTED", faithful_transcript_status="UNRESOLVED")
+                       faithful_transcript_status="UNRESOLVED")
         integration = [h for h in harnesses if h == "test_phase1_integration"]
         if not integration:
             raise audit.AuditError("typed integration harness missing")

@@ -14,7 +14,10 @@
                                                                context_descriptor
                                                                type O1/O2/O3 use)
 
-    with no opaque [parse_manifest] and no opaque manifest-match contract.
+    Policy equality is the explicit local [policy_binding p_committed ti]
+    premise, not a consequence of hashing. Authentication, digest matching and
+    descriptor commitments remain separate evidence. No cryptographic
+    injectivity is assumed.
     The remaining premises are the explicitly-named F.3 residuals
     ([sha256_hex], [ed25519_verify], [ed25519_pubkey_valid], retrieval
     integrity).
@@ -34,8 +37,8 @@
     [parse_manifest_impl (ti_manifest ti) = Some v] with
     [cm_audit_instance_id v = committed_audit_instance_id]
     (VERDICT_SEMANTICS.md 5 step 5).  Residual: [policy_audit_instance_id_of]
-    returning the load-validated policy's true audit id (F.3 until the policy
-    parser is concrete).
+    returning the supplied policy's intended audit id (an external
+    policy-realisation contract in the parametric release).
 
     [op_record_identity_mismatch] is concrete
     ([CampaignRecord.record_identity_mismatch_impl parse_record_impl
@@ -88,9 +91,6 @@ Hypothesis digest_eqb_refl : forall a, digest_eqb a a = true.
 
 Variable p_committed : policy.
 Variable committed_descriptor : context_descriptor.
-Variable policy_payload_digest_of : policy -> digest.
-Hypothesis policy_payload_digest_injective :
-  forall p q, policy_payload_digest_of p = policy_payload_digest_of q -> p = q.
 Variable policy_context_of : policy -> context_descriptor.
 Variable policy_audit_instance_id_of : policy -> string.
 Variable committed_audit_instance_id : string.
@@ -171,16 +171,14 @@ Variable audit_manifest : manifest.
 Variable audit_view : campaign_manifest_view.
 Hypothesis audit_manifest_parses :
   parse_manifest_impl audit_manifest = Some audit_view.
-Hypothesis audit_policy_hash_committed :
-  cm_policy_hash audit_view = policy_payload_digest_of p_committed.
 (* AUDIT_POLICY 2.4 step 3: the committed policy payload embeds the committed
    context digests. *)
 Hypothesis committed_policy_context :
   policy_context_of p_committed = committed_descriptor.
 (* AUDIT_POLICY 2.4 step 3 / 2.5: the committed policy payload carries the
    committed audit_instance_id.  Residual: [policy_audit_instance_id_of] returns
-   the load-validated policy's true audit_instance_id -- an F.3 fact until the
-   policy representation / parser is concrete. *)
+   the supplied policy's intended audit_instance_id -- an external
+   policy-realisation contract in the parametric release. *)
 Hypothesis committed_policy_audit_id :
   policy_audit_instance_id_of p_committed = committed_audit_instance_id.
 
@@ -194,7 +192,7 @@ Hypothesis validated_manifest_is_audit :
 
 Theorem validate_campaign_pipeline :
   forall ti ac l0,
-    ManifestMatching.policy_digest_load_validated policy_payload_digest_of ti ->
+    ManifestMatching.policy_binding p_committed ti ->
     validate_campaign (pipeline_ops base) ti = ValidCampaign ac l0 ->
     manifest_authenticated_by_impl sha256_hex ed25519_verify ed25519_pubkey_valid (ti_config ti)
       (authenticated_commitment ac) (authenticated_manifest ac)
@@ -202,7 +200,7 @@ Theorem validate_campaign_pipeline :
     /\ pipeline_commits (ti_config ti) (authenticated_commitment ac)
          committed_descriptor.
 Proof.
-  intros ti ac l0 Hload H.
+  intros ti ac l0 Hbinding H.
   assert (Hauth :
     manifest_authenticated_by_impl sha256_hex ed25519_verify ed25519_pubkey_valid (ti_config ti)
       (authenticated_commitment ac) (authenticated_manifest ac))
@@ -210,11 +208,7 @@ Proof.
                (pipeline_ops base) ti ac l0
                (pipeline_ops_signer base) (pipeline_ops_signature base) H).
   assert (Hpolicy : ti_policy ti = p_committed)
-    by exact (ManifestMatching.validate_campaign_concrete_binds_policy
-               digest_eqb_true p_committed policy_payload_digest_injective
-               audit_manifest_parses audit_policy_hash_committed
-               (pipeline_ops base) (pipeline_ops_policy_match base)
-               validated_manifest_is_audit Hload H).
+    by exact Hbinding.
   split; [ exact Hauth |]. split; [ exact Hpolicy |].
   (* the third conjunct: the context matcher fired => the manifest's context
      digests equal policy_context_of (ti_policy ti) = committed_descriptor *)
@@ -266,24 +260,20 @@ Qed.
    three conclusions. *)
 Theorem validate_campaign_audit_agrees :
   forall ti ac l0,
-    ManifestMatching.policy_digest_load_validated policy_payload_digest_of ti ->
+    ManifestMatching.policy_binding p_committed ti ->
     validate_campaign (pipeline_ops base) ti = ValidCampaign ac l0 ->
     exists v,
       parse_manifest_impl (ti_manifest ti) = Some v /\
       cm_audit_instance_id v = committed_audit_instance_id.
 Proof.
-  intros ti ac l0 Hload H.
+  intros ti ac l0 Hbinding H.
   pose proof (validate_campaign_valid_audit (pipeline_ops base) ti H) as Hau.
   rewrite (pipeline_ops_audit_match base) in Hau.
   apply (ManifestAudit.manifest_audit_matches_impl_true_iff
            parse_manifest_impl policy_audit_instance_id_of (ti_manifest ti) ti) in Hau.
   destruct Hau as (v & Hpar & Hid).
   assert (Hpolicy : ti_policy ti = p_committed)
-    by exact (ManifestMatching.validate_campaign_concrete_binds_policy
-               digest_eqb_true p_committed policy_payload_digest_injective
-               audit_manifest_parses audit_policy_hash_committed
-               (pipeline_ops base) (pipeline_ops_policy_match base)
-               validated_manifest_is_audit Hload H).
+    by exact Hbinding.
   exists v. split; [ exact Hpar |].
   rewrite Hid, Hpolicy. exact committed_policy_audit_id.
 Qed.

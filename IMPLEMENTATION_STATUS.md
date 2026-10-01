@@ -1,26 +1,31 @@
 # Implementation status and historical delivery ledger
 
-**Current implementation note (Closure Batch 3, 2026-10-01):** Phase 1 is OPEN.
-The former admitted obligations are proved; the current build compiles, links
-and executes the extracted outputs against the configured Zarith installation.
-All required extraction units use bigint mappings. The native mirror is retained
-only as a historical non-normative demo and is excluded from the release path.
-A bounded typed integration harness and finite differential comparator now run. `make check` now discovers and
-fail-closed inspects all substantive theorem-like declarations, retaining legacy
-requests as coverage requirements. `make release` records current counts and
-manifest/build evidence without declaring closure. See [TRUST.md](TRUST.md),
+**Current implementation (Closure Batch 5, 2026-10-01): Phase 1 OPEN; PARAMETRIC.**
+Former admitted obligations are proved, all required extractions use bigint,
+and the native orchestration mirror is excluded from required execution.
+Complete fail-closed assumption inspection, structural/differential checks,
+all existing harnesses and bounded ASCII byte integration run in `make check`.
+The integrated campaign is empty; no full model/witness execution is claimed.
+
+Batch 5 replaces universal policy digest injectivity in seven theorem interfaces
+with explicit per-input token equality. Separate digest agreement is preserved;
+no hashing-to-semantic-identity inference remains in those interfaces. The supplied
+functional `Policy`/`AuditContext` remains subject to an external semantic-realisation
+contract. Transcript faithfulness remains separately unresolved/external.
+No concrete semantic policy loader, target registry or quantiser is required by
+this release boundary, and none is implemented here.
+
+`make release` verifies source-manifest/build evidence and records mechanically
+generated counts, `policy_mode: PARAMETRIC`, semantic loader `NOT_IN_PHASE1_SCOPE`
+and **OPEN / NOT YET CLOSED**. Final closure review remains pending. See
+[TRUST.md](TRUST.md), [NONCLAIMS.md](NONCLAIMS.md),
 [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md) and [PHASE_1_STATUS.md](PHASE_1_STATUS.md).
+The [Batch-3 byte report](PHASE_1_BYTE_BINDING.md) preserves its tested boundaries;
+its earlier injectivity/loader blockers are superseded by Batch 5.
 
-Batch 3 additionally runs a bounded hand-written ASCII byte adapter, derives
-record completeness, checks descriptor/artifact snapshots and tests offline
-transcript decoding/canonical digest input. These are trusted executable checks,
-not formal loader/parser correctness. Full semantic policy loading and general
-`to_cv` conformance remain open; the injectivity premise cannot be a universal
-SHA-256 fact. See [PHASE_1_BYTE_BINDING.md](PHASE_1_BYTE_BINDING.md).
-
-The chronological skeleton/build/unit accounts below are historical. Their
-then-current counts, admitted obligations and library limitations are not
-statements of the present checkout.
+The chronological accounts below are historical. Their then-current counts,
+admitted obligations, library limitations and broader concrete-loader acceptance
+requirements are not statements of the present parametric checkout.
 
 ## Historical Phase-0 executable skeleton
 
