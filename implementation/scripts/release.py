@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the current Phase-1 checks and record evidence; never declare closure."""
+"""Run Phase-1 checks and report the recorded parametric closure disposition."""
 
 from datetime import datetime, timezone
 import hashlib
@@ -207,6 +207,8 @@ def main():
         stage = "manifest recheck"
         verify_manifest(ROOT, git_files(ROOT))
         summary["verification_status"] = "PASS"
+        # Batch 7 records closure; required failures must never emit CLOSED evidence.
+        summary["release_status"] = "CLOSED"
     except (audit.AuditError, OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         if stage.startswith("manifest"):
             summary["manifest_verification_result"] = "FAIL"
@@ -217,7 +219,7 @@ def main():
     finally:
         summary["finished_utc"] = datetime.now(timezone.utc).isoformat()
         summary_path.write_text(json.dumps(summary, indent=2) + "\n")
-    print(f"PASS: current release checks; Phase 1 OPEN / NOT YET CLOSED; summary: {summary_path}")
+    print(f"PASS: current release checks; Phase 1 CLOSED (PARAMETRIC); summary: {summary_path}")
     return 0
 
 

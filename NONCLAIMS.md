@@ -2,7 +2,7 @@
 
 PCFW verifies claim conditions relative to a formally specified learned
 observation regime; it does not thereby verify the learned system in its entirety.
-Phase 1 is **OPEN**, with a **PARAMETRIC** release boundary. This implementation
+Phase 1 is **CLOSED**, with a **PARAMETRIC** release boundary. This implementation
 companion supplements [NON_CLAIMS.md](NON_CLAIMS.md); current release scope is
 [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md).
 

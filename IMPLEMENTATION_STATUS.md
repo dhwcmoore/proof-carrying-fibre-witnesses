@@ -1,6 +1,6 @@
 # Implementation status and historical delivery ledger
 
-**Current implementation (Closure Batch 5, 2026-10-01): Phase 1 OPEN; PARAMETRIC.**
+**Current implementation (Closure Batch 7, 2026-10-01): Phase 1 CLOSED; PARAMETRIC.**
 Former admitted obligations are proved, all required extractions use bigint,
 and the native orchestration mirror is excluded from required execution.
 Complete fail-closed assumption inspection, structural/differential checks,
@@ -17,7 +17,8 @@ this release boundary, and none is implemented here.
 
 `make release` verifies source-manifest/build evidence and records mechanically
 generated counts, `policy_mode: PARAMETRIC`, semantic loader `NOT_IN_PHASE1_SCOPE`
-and **OPEN / NOT YET CLOSED**. Final closure review remains pending. See
+and **CLOSED** after all required checks pass. Batch 7 accepts the documented
+premises, bounded execution evidence and local process-trust scope. See
 [TRUST.md](TRUST.md), [NONCLAIMS.md](NONCLAIMS.md),
 [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md) and [PHASE_1_STATUS.md](PHASE_1_STATUS.md).
 The [Batch-3 byte report](PHASE_1_BYTE_BINDING.md) preserves its tested boundaries;

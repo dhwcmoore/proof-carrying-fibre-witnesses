@@ -3,11 +3,20 @@
 PCFW verifies claim conditions relative to a formally specified learned observation
 regime; it does not thereby verify the learned system in its entirety.
 
-**Phase 1 is OPEN. Its release boundary is PARAMETRIC. Phase 2 is unauthorised.**
+**Phase 1 is CLOSED. Its release boundary is PARAMETRIC. Phase 2 is unauthorised.**
 Results are relative to a caller-supplied semantic `Policy` and `AuditContext`,
 explicit local policy binding and semantic-realisation premises, and the existing
 manifest, record, transcript and validation contracts. Phase 1 does not supply a
 concrete semantic policy loader or interpret arbitrary policy bytes.
+
+Phase 1 is closed as a parametric proof-carrying verification framework.
+Kernel-checked results hold relative to explicitly supplied semantic policy,
+audit context, policy-realisation and transcript-faithfulness premises. The release
+includes fail-closed assumption auditing, exact-integer extracted execution on
+the identified normative paths, canonical artefact checks, adversarial gate tests
+and repeatable local release evidence. It does not claim concrete policy
+realisation, physical observation faithfulness, whole-model verification or
+certification.
 
 | Document | Purpose |
 |---|---|
@@ -21,7 +30,8 @@ complete assumption inspection, policy-interface checks, all OCaml harnesses,
 and the integer, differential and byte gates. Run `make gate-tests` for adversarial
 checks of the gates. Run `make release` for manifest verification and a clean full
 check, with generated evidence in `implementation/release-audit/summary.json`.
-Required failures stop the gate. A passing release remains **OPEN / NOT YET CLOSED**.
+Required failures stop the gate. A passing release records the Batch-7
+**CLOSED** disposition; a failed run does not emit CLOSED evidence.
 Kernel closure does not discharge theorem premises; test agreement does not prove
 general executable correspondence.
 

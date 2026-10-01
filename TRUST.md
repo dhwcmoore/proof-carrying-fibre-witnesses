@@ -1,6 +1,6 @@
 # Current Phase-1 trust account
 
-**Phase 1 is OPEN; policy mode is PARAMETRIC (Closure Batch 5, 2026-10-01).**
+**Phase 1 is CLOSED; policy mode is PARAMETRIC (Closure Batch 7, 2026-10-01).**
 The public claim is conditional on a supplied semantic `Policy`, supplied
 `AuditContext`, local policy binding and the existing validation/evidence
 contracts. [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md) governs this release scope.
@@ -112,8 +112,9 @@ supplied `C`; it does not verify where that `C` came from.
 Raw extracted APIs retain caller-supplied semantic inputs and callbacks, with
 logical premises erased. Even an accepted byte payload plus a successful
 `validate_campaign` is insufficient to infer the caller's token or functional
-policy is the intended committed policy. This batch changes proofs and the
-claim boundary, not runtime enforcement of that association.
+policy is the intended committed policy. Batch 5 changed proofs and the claim
+boundary; Batch 7 records closure without changing runtime enforcement of that
+association.
 
 ## TRANSCRIPT-FAITHFULNESS PREMISE
 
@@ -152,6 +153,14 @@ an authenticated release signature.
 `make release` verifies the manifest, cleans, runs the full check and rechecks the
 manifest. It records the base SHA, dirty status, manifest digest, tool versions
 and generated counts, with policy mode `PARAMETRIC` and semantic loader status
-`NOT_IN_PHASE1_SCOPE`. Passing always records **OPEN / NOT YET CLOSED**. This is
-local build evidence, not byte-identical dependency reproducibility; CI/dependency
-locking and final premise/trust acceptance remain review work.
+`NOT_IN_PHASE1_SCOPE`. Passing records the Batch-7 **CLOSED** disposition only
+after all required checks and the final manifest verification succeed. A failed
+run invalidates prior passing evidence and does not report CLOSED.
+
+Batch 7 accepts the stated theorem premises, supported API boundary and residual
+implementation trust without claiming their discharge. The empty integration,
+bounded adapters and finite correspondence evidence retain their stated limits.
+Reproducibility acceptance is limited to repeatable local clean builds and recorded
+toolchain/source evidence. CI/dependency locking and byte-identical dependency
+reproducibility are not established; their residual scope is explicitly accepted
+for this parametric closure.

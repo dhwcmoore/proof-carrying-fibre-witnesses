@@ -1,6 +1,6 @@
 # Phase-1 implementation and verification
 
-**Phase 1 is OPEN; policy mode is PARAMETRIC (Closure Batch 5).** Results
+**Phase 1 is CLOSED; policy mode is PARAMETRIC (Closure Batch 7).** Results
 are relative to supplied semantic inputs and explicit premises. Current scope is
 [RELEASE_CRITERIA.md](../RELEASE_CRITERIA.md); Phase 2 is unauthorised.
 This directory implements the orchestration algebra introduced in Revision 14.
@@ -151,7 +151,7 @@ make check
 `make release` verifies the source manifest, cleans and runs the full existing
 check. The generated summary in `release-audit/summary.json` records current
 counts, `policy_mode: PARAMETRIC`, semantic loader `NOT_IN_PHASE1_SCOPE`
-and **OPEN / NOT YET CLOSED**. All substantive theorem-like declarations
+and **CLOSED** after all required checks pass. All substantive theorem-like declarations
 and legacy requested obligations are inspected by a generated `coqc` audit;
 errors, missing inspections and global axioms fail the build. The policy-interface
 gate kernel-typechecks the seven local-binding signatures. The old unchecked
@@ -267,7 +267,7 @@ only `transcript_evidence` can carry the digest it produces. See
 `PHASE_1_TRANSCRIPT_DIGEST.md`.
 
 Every named `primitive_ops` member has a concrete or contract-bound treatment.
-Phase 1 remains OPEN pending final parametric closure review. Parser/capture
+Phase 1 is CLOSED under the parametric boundary confirmed by Batch 7. Parser/capture
 shape, digest-function correctness, artifact/context association and observation
 faithfulness retain their stated premises. The empty integrated campaign does
 not demonstrate full model/witness execution. Current acceptance criteria and

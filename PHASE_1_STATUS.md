@@ -1,7 +1,7 @@
 # Phase 1 status ledger
 
-**Current release boundary (Closure Batch 5, 2026-10-01): PARAMETRIC. Phase 1
-is OPEN; Phase 2 is unauthorised.** [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md)
+**Current release boundary (Closure Batch 7, 2026-10-01): PARAMETRIC. Phase 1
+is CLOSED; Phase 2 is unauthorised.** [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md)
 now governs acceptance. The broader historical Phase-0 closure work list below
 is superseded where it required concrete semantic policy interpretation; this
 change is an explicit scope decision, not completion of those design features.
@@ -17,9 +17,9 @@ Their absence is not a release blocker.
 
 `make check` and `make release` include complete assumption inspection and the
 seven-interface gate. Generated release evidence declares `PARAMETRIC` and loader
-`NOT_IN_PHASE1_SCOPE` while keeping **OPEN / NOT YET CLOSED**. Batch 5 changes
-no extraction mapping, runtime algorithm, capture/replay or faithfulness contract.
-It issues no reviewer concurrence or final closure disposition. See
+`NOT_IN_PHASE1_SCOPE` and records **CLOSED** after all required checks pass. Batch 7
+confirms closure with the documented premises and local process-trust limits;
+it changes no extraction mapping, runtime algorithm, capture/replay or faithfulness contract. See
 [TRUST.md](TRUST.md) and [NONCLAIMS.md](NONCLAIMS.md).
 
 ## Historical unit acceptance ledger

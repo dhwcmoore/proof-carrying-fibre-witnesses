@@ -1,9 +1,10 @@
 # Phase-1 release criteria
 
-**Status: OPEN / NOT YET CLOSED. Policy mode: PARAMETRIC.** Closure Batch 5
-adopts the release boundary established by the Batch-4B/4C audits. It supersedes
-broader concrete-implementation acceptance wording in the historical Phase-0
-closure list and specifications; it does not close Phase 1 or authorise Phase 2.
+**Status: CLOSED. Policy mode: PARAMETRIC (Closure Batch 7, 2026-10-01).**
+Closure Batch 5 adopted the release boundary established by the Batch-4B/4C audits.
+It supersedes broader concrete-implementation acceptance wording in the historical Phase-0
+closure list and specifications. Batch 7 closes this parametric boundary;
+Phase 2 remains unauthorised.
 
 ## Parametric acceptance boundary
 
@@ -63,9 +64,10 @@ Ignored `implementation/release-audit/` contains `summary.json`, `inventory.json
 `integer-correspondence.json`, `differential.json`, the differential oracle source
 and log, `byte-vectors.json`, `clean.log` and `check.log`. The summary reports
 `policy_mode: PARAMETRIC` and `concrete_semantic_policy_loader: NOT_IN_PHASE1_SCOPE`,
-while release status remains OPEN. It invalidates a prior passing summary before
-required checks; failure returns nonzero. Counts come from source inventories,
-interface declarations, harness discovery and recorded test execution.
+and records `release_status: CLOSED` only after all required checks and the final
+manifest verification succeed. It invalidates a prior passing summary before
+required checks; failure returns nonzero without CLOSED evidence. Counts come from
+source inventories, interface declarations, harness discovery and recorded test execution.
 For an uncommitted run the SHA identifies the base commit; dirty status and the
 manifest digest identify the checked working-tree boundary.
 
@@ -80,15 +82,17 @@ When intentionally changing source, update `MANIFEST.sha256` separately as a
 reviewable change. A stale manifest must fail release; automatic regeneration
 inside the gate would defeat this check.
 
-## Remaining closure review
+## Closure disposition and retained limits
 
-**BLOCKING:** final parametric closure audit and acceptance of current evidence,
-all public theorem premises and the claimed supported API boundary. That review
-must assess the bounded harness coverage and retained parser/loader/`to_cv`,
-domain, metadata/retrieval, policy-realisation and faithfulness contracts; it
-cannot infer their discharge from passing checks. Review the reproducibility/CI
-arrangements and either establish them or explicitly accept their residual scope.
-No reviewer concurrence or closure disposition is issued by this batch.
+**CLOSED:** Batch 7 confirms the repaired extraction inventory and accepts current
+evidence, all public theorem premises and the supported parametric API boundary.
+No BLOCKING item remains. Bounded harness coverage and retained parser/loader/`to_cv`,
+domain, metadata/retrieval, policy-realisation and faithfulness contracts remain
+explicit; their discharge is not inferred from passing checks. Reproducibility
+acceptance is limited to local clean-build evidence with recorded toolchain/source
+metadata. CI/dependency locking and byte-identical dependency reproducibility remain
+documented residuals. The SHOULD FIX items below are advisory, not closure conditions;
+their retention does not claim that the suggested work was performed.
 
 **SHOULD FIX:** relocate root history/batch reports in a separate mechanical
 cleanup, preserving references and source-manifest coverage; consider additional
