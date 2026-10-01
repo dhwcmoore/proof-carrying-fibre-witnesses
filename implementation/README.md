@@ -1,4 +1,4 @@
-# Compiler-checkable orchestration skeleton
+# Phase-1 implementation and verification
 
 This directory pins the orchestration algebra that Revision 14 expressed as
 pseudocode. It is intentionally small enough to review as code.
@@ -40,12 +40,14 @@ cross-checking and certificate/report construction. Each member is a total
 function. Phase 1 must replace each member with its implementation and prove its
 contract.
 
-## Deliberate proof holes
+## Current proof status and historical REP1 repair
 
-The file includes named `Admitted` obligations for `(T2-sound)`, `(T2-complete)`,
-stage-1 terminality, v0 exactness unreachability and validation fuel
-reachability. This repository therefore must not yet run the production
-forbidden-token gate.
+The former `Admitted` obligations for `(T2-sound)`, `(T2-complete)`, stage-1
+terminality, v0 exactness unreachability and validation fuel reachability are
+proved. No `Admitted`, `admit`, `Axiom` or `Parameter` remains in project-owned
+formal source. `make check` runs a comment/string-aware source gate across the
+project-owned Rocq inventory. Section premises remain explicit and are
+inventoried separately; kernel closure does not discharge them.
 
 `(REP1)` is **no longer** among them. The earlier
 `REP1_not_run_has_no_witness` quantified over an arbitrary `list stage2_slot`
@@ -116,9 +118,25 @@ Expected toolchain: Rocq/Coq 8.18.0 and OCaml 4.14.1.
 make check
 ```
 
-**Built and verified** (a different session, with `coqc`/`coqchk`/`ocamlc` 8.18.0 /
-4.14.1 present) after four source fixes and one `Makefile` fix, all applied in
-this tree:
+`make release` verifies the source manifest, cleans and runs the full existing
+check. The generated summary in `release-audit/summary.json` records current
+counts and **OPEN / NOT YET CLOSED**. All substantive theorem-like declarations
+and legacy requested obligations are inspected by a generated `coqc` audit;
+errors, missing inspections and global axioms fail the build. The old unchecked
+`coqtop` calls have been removed. See [TRUST.md](../TRUST.md) and
+[RELEASE_CRITERIA.md](../RELEASE_CRITERIA.md). `make gate-tests` exercises the
+new gates using temporary fixtures.
+
+The current build compiles, links and executes all five extraction outputs.
+Zarith development interfaces are available in the build environment used for
+the current baseline. Two extraction paths still use native integers; neither
+general executable correspondence nor an integrated exact-integer pipeline is
+established by these harnesses.
+
+### Historical initial build repairs
+
+The initial skeleton needed four source fixes and one Makefile fix, all already
+applied. This historical account is not the current verification result:
 
 - `rocq/Orchestration.v` line ~490: `Open Scope string_scope` (line 3) rebinds
   `++` to `String.append` for the rest of the file. Inside a bare tuple literal
@@ -152,30 +170,14 @@ this tree:
   its search path when it differs from the invocation's working directory.
   Fixed by adding `-I ocaml` to both `ocaml:` recipe lines.
 
-After those five fixes: `coqc` builds both `rocq/Orchestration.v` and
-`rocq/ExtractOrchestration.v` clean; `coqchk` reports "Modules were successfully
-checked"; `Print Assumptions` on each of the six named theorems shows exactly
-that theorem as its own sole axiom — no stray `Admitted`s leaked in from
-elsewhere; extraction regenerates `ocaml/extracted_orchestration.{ml,mli}`; the
-hand-written `ocaml/orchestration.{ml,mli}` skeleton compiles clean.
+After those fixes the initial modules compiled, but the then-admitted theorems
+were still global axioms. They were subsequently proved. An earlier environment
+also lacked usable Zarith interfaces; that limitation does not apply to the
+current opam library installation. See
+`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` for the later compilation/linking
+evidence and its exact limits.
 
-**Not verified**: linking the Coq-*extracted* OCaml end-to-end. `ExtrOcamlZBigInt`
-extracts `Z`/`positive`/`nat` to `Big_int_Z`-backed big integers, and the `zarith`
-install in the verifying environment (1.13, apt-packaged) ships only `.cma`/`.cmxs`
-archives with no `.cmi` interface files at all — not specific to this project, a
-gap in that environment's `zarith` package. The generated `.ml`/`.mli` themselves
-were not edited and are presumed correct pending a `zarith` install with dev
-interfaces present.
-
-(Update, 2026-09-13: verified end-to-end in the build environment used for
-`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`, whose `zarith` install — the one
-this `Makefile`'s own `OCAML_LIB`/`ZARITH` variables resolve to via `opam var
-lib` — does ship complete `.cmi` interfaces. `ExtractOrchestration.v` needed
-one addition, `ExtrOcamlNativeString` to its import list; the generated
-`.ml`/`.mli` themselves were otherwise correct as presumed. See that document
-for exactly what is now compiled/linked/executed and what remains open.)
-
-### Follow-up build (this repo): REP1 repair + context-bundle reporting
+### Historical follow-up: REP1 repair + context-bundle reporting
 
 Applied in this tree and rebuilt with `coqc`/`coqchk`/`coqtop`/`ocamlc` 8.18.0 /
 4.14.1:
@@ -195,23 +197,13 @@ Applied in this tree and rebuilt with `coqc`/`coqchk`/`coqtop`/`ocamlc` 8.18.0 /
 4. `rocq/PrintOrchestrationAssumptions.v` + `make assumptions`; new `make test`
    runs `ocaml/test_context_bundle.ml`.
 
-`make check` exits 0: `coqc` builds all four `.v` files; `coqchk` → "Modules
-were successfully checked" (`PCFW.FibreWitnessKernel`, `PCFW.Orchestration`);
-`make assumptions` shows `REP1_not_run_has_no_witness`,
-`REP1_replay_not_run_has_no_witness` and `replay_stage2_wf` as
-`Closed under the global context` and the five still-`Admitted` obligations
-(`T2_sound`, `T2_complete`, `stage1_over_is_terminal`, `exact_unreachable_v0`,
-`validation_fuel_obstructed_unreachable_when_sufficient`) each as their own sole
-axiom; extraction regenerates `ocaml/extracted_orchestration.{ml,mli}` (carrying
-the new constructor); the hand-written skeleton compiles; `make test` prints
-`PASS`.
+That intermediate build checked the repaired REP1 results while the other five
+obligations remained admitted. The later orchestration-proof unit discharged
+them, and the arbitrary-precision units compiled, linked and executed the
+extracted outputs against a usable Zarith installation. These historical
+intermediate limits must not be read as current proof holes or build failures.
 
-**Still not verified**: linking the Coq-*extracted* OCaml against `zarith` (this
-environment's `zarith` ships no `.cmi` files — an environment gap, not a source
-defect). (Update, 2026-09-13: see the note above — verified in a different
-build environment whose `zarith` install has complete `.cmi` files.)
-
-## Current status (this section only; not updated per Phase 1 unit)
+## Current status
 
 `primitive_ops` (§ "What is abstract" above) is, as of this section, no longer
 uniformly abstract: every validation-tier member EXCEPT `op_transcript_digest`
@@ -223,8 +215,8 @@ uniformly abstract: every validation-tier member EXCEPT `op_transcript_digest`
 exact status and reviewer disposition of each.
 `op_stage1_check` / `op_preflight` / `op_eval_o3` / `op_stage2_check` are
 concrete and wired (`Stage1Wrapper`, `ContextResolution`, `Stage2Adapter`,
-`PipelineWiring`). The five "Deliberate proof holes" `Admitted` obligations
-listed above were all discharged in `PHASE_1_ORCHESTRATION_PROOFS.md`; none
+`PipelineWiring`). The five former `Admitted` obligations
+were all discharged in `PHASE_1_ORCHESTRATION_PROOFS.md`; none
 remain `Admitted` in `rocq/Orchestration.v`.
 
 `op_transcript_digest : exec_transcript -> digest`, the last `primitive_ops`

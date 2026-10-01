@@ -39,3 +39,7 @@ implementation/ocaml/test_transcript_digest
 
 # OS cruft
 .DS_Store
+
+# Generated release evidence and Python gate caches
+implementation/release-audit/
+__pycache__/

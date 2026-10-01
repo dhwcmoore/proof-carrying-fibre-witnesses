@@ -1,4 +1,7 @@
-.PHONY: check rocq ocaml check-kernel-trust assumptions test clean
+.PHONY: check rocq ocaml check-kernel-trust check-source-trust assumptions test clean gate-tests release
+
+# Keep inspection after compilation, including when the caller uses make -j.
+.NOTPARALLEL:
 
 # F.3 named-component libraries for the authentication harness (SHA-256, bignum).
 # F.3 crypto-library locations. Override on the command line if needed, e.g.
@@ -6,8 +9,9 @@
 OCAML_LIB ?= $(shell opam var lib 2>/dev/null || echo $(HOME)/.opam/default/lib)
 ZARITH ?= $(OCAML_LIB)/zarith
 SHALIB ?= $(OCAML_LIB)/sha
+export OCAML_LIB ZARITH SHALIB
 
-check: rocq ocaml check-kernel-trust assumptions test
+check: check-source-trust rocq ocaml assumptions test
 
 rocq:
 	coqc -Q rocq PCFW rocq/FibreWitnessKernel.v
@@ -37,12 +41,9 @@ rocq:
 	coqc -Q rocq PCFW rocq/ExtractTranscriptDigest.v
 	coqchk -Q rocq PCFW PCFW.FibreWitnessKernel PCFW.Orchestration \
 	  PCFW.Stage2 PCFW.Stage2Adapter PCFW.Stage1 PCFW.Stage1Invariant PCFW.Stage1Wrapper PCFW.ContextResolution PCFW.PipelineWiring PCFW.ValidationBinding PCFW.CanonicalV1 PCFW.ManifestMatching PCFW.ManifestAuthentication PCFW.ManifestLedger PCFW.ManifestAudit PCFW.CampaignRecord PCFW.RecordCrosscheck PCFW.CompletenessWellformed PCFW.TranscriptDigest PCFW.ManifestPipeline
-	coqtop -quiet -Q rocq PCFW < rocq/PrintKernelAssumptions.v
 
-assumptions:
-	coqtop -quiet -Q rocq PCFW < rocq/PrintOrchestrationAssumptions.v
-	coqtop -quiet -Q rocq PCFW < rocq/PrintStage2Assumptions.v
-	coqtop -quiet -Q rocq PCFW < rocq/PrintTranscriptDigestAssumptions.v
+assumptions: check-source-trust rocq
+	python3 scripts/audit.py assumptions
 
 ocaml:
 	ocamlc -I ocaml -c ocaml/orchestration.mli
@@ -80,8 +81,16 @@ test: ocaml rocq
 	ocamlc -custom -I ocaml -I $(ZARITH) -I $(SHALIB) $(ZARITH)/zarith.cma $(SHALIB)/sha.cma -cclib -lsha_stubs -cclib -L$(SHALIB) ocaml/extracted_manifest_auth.cmo ocaml/test_manifest_authentication.ml -o ocaml/test_manifest_authentication
 	./ocaml/test_manifest_authentication
 
-check-kernel-trust:
-	! grep -En '\b(Admitted|admit|Axiom|Parameter|Hypothesis)\b' rocq/FibreWitnessKernel.v
+check-kernel-trust: check-source-trust
+
+check-source-trust:
+	python3 scripts/audit.py tokens
+
+gate-tests:
+	python3 scripts/test_gates.py
+
+release:
+	python3 scripts/release.py
 
 clean:
 	find rocq -type f \( -name '*.vo' -o -name '*.vos' -o -name '*.vok' -o -name '*.glob' -o -name '*.aux' \) -delete

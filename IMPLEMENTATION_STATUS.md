@@ -1,4 +1,19 @@
-# Phase 0 executable skeleton
+# Implementation status and historical delivery ledger
+
+**Current implementation note (Closure Batch 1, 2026-10-01):** Phase 1 is OPEN.
+The former admitted obligations are proved; the current build compiles, links
+and executes the extracted outputs against the configured Zarith installation.
+Two extraction paths remain native-integer. `make check` now discovers and
+fail-closed inspects all substantive theorem-like declarations, retaining legacy
+requests as coverage requirements. `make release` records current counts and
+manifest/build evidence without declaring closure. See [TRUST.md](TRUST.md),
+[RELEASE_CRITERIA.md](RELEASE_CRITERIA.md) and [PHASE_1_STATUS.md](PHASE_1_STATUS.md).
+
+The chronological skeleton/build/unit accounts below are historical. Their
+then-current counts, admitted obligations and library limitations are not
+statements of the present checkout.
+
+## Historical Phase-0 executable skeleton
 
 The normative prose in this archive is preserved byte-for-byte from Revision 14.
 The new `implementation/` directory is a Phase 1 entry skeleton. It exists to
@@ -17,8 +32,8 @@ Primitive parsing, cryptography, hashing, stage checks and certificate assembly
 are represented by the typed `primitive_ops` interface. This makes their trust
 boundary explicit without pretending that Phase 0 prose implements them.
 
-The proof statements are present and deliberately use `Admitted`. They are proof
-obligations, not claims of completion. The OCaml source is an independently
+At that delivery, the proof statements deliberately used `Admitted`. They were
+proof obligations, subsequently discharged. The OCaml source is an independently
 written executable structural mirror for early tests. The authoritative Phase 1
 OCaml is to be regenerated from `rocq/ExtractOrchestration.v` after the admitted
 proofs and primitive implementations are discharged.
@@ -442,9 +457,12 @@ deterministic MOCK digest (explicitly not SHA-256) over a submission-free
 campaign. See `PHASE_1_TRANSCRIPT_DIGEST.md`. **Reviewer-concurred and
 promoted; not a Phase 1 closure.**
 
-Across `make check`, **152** `Print Assumptions` "Closed under the global
-context"; `coqchk` covers 20 modules; ten `make test` harnesses PASS (eight
-validation-tier + two arbitrary-precision, `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`).
+Before Closure Batch 1, the hand-selected lists requested 152 assumption
+inspections. They omitted supporting declarations. The current release surface
+discovers all substantive theorem-like declarations and retains those legacy
+requests; the generated inventory and release summary supply the current count.
+The baseline had 20 substantive modules and ten passing OCaml harnesses; these
+counts are also checked mechanically by the release procedure.
 Packaging: `make clean` before archiving (source only -- no `*.vo`,
 `extracted_*.ml`, or compiled executables); the `Makefile` locates crypto
 libraries via `opam var lib` with a `?=` override.

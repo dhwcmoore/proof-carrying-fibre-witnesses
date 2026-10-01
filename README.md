@@ -14,6 +14,7 @@ Formal-verification project (Rocq/Coq 8.18.0 + OCaml 4.14.1).
 | [`AUDIT_POLICY_AND_EVIDENCE.md`](AUDIT_POLICY_AND_EVIDENCE.md) · [`VERDICT_SEMANTICS.md`](VERDICT_SEMANTICS.md) · [`THREAT_MODEL.md`](THREAT_MODEL.md) · [`TRUST_BOUNDARY.md`](TRUST_BOUNDARY.md) | Normative specification (frozen at Rev 15) |
 | [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md) · [`PHASE_1_STATUS.md`](PHASE_1_STATUS.md) | Current implementation status ledger |
 | [`implementation/`](implementation/) | Rocq development + OCaml harnesses |
+| [`TRUST.md`](TRUST.md) · [`NONCLAIMS.md`](NONCLAIMS.md) · [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md) | Current implementation evidence, residual trust and release gate |
 
 ## Building
 
@@ -22,10 +23,17 @@ cd implementation
 make check
 ```
 
-runs `coqc` / `coqchk` over the Rocq sources, regenerates the extracted OCaml,
-prints `Print Assumptions` for every proved obligation, and runs the OCaml test
-harnesses. `MANIFEST.sha256` records the SHA-256 of every tracked source and
-document file.
+runs the project-owned source-token gate, `coqc` / `coqchk`, extraction
+regeneration, a fail-closed assumption audit of all substantive theorem-like
+declarations plus the legacy requested obligations, and all existing OCaml
+harnesses. Kernel closure does not discharge theorem premises.
+
+From the repository root, `make release` verifies `MANIFEST.sha256`, cleans,
+runs the full check and records mechanical evidence in
+`implementation/release-audit/summary.json`. It fails on any required failure
+and always leaves Phase 1 **OPEN / NOT YET CLOSED**. The manifest covers tracked
+and non-ignored untracked source/document files, excluding itself. The release
+command verifies it without regenerating it. See [`RELEASE_CRITERIA.md`](RELEASE_CRITERIA.md).
 
 ## Authorship
 
