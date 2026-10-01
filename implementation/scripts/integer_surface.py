@@ -57,7 +57,7 @@ def inventory():
     wrappers=sorted(p for p in (audit.IMPL/'ocaml').glob('*.ml') if not p.name.startswith('extracted_') and p.name!='orchestration.ml')
     for path in wrappers:
         entries.append({'module':path.stem,'category':4,'implementation':str(path.relative_to(audit.IMPL.parent)),
-                        'integer_representation':'checked Big_int_Z semantic fixtures; native host byte/bit/list utility indices where used',
+                        'integer_representation':'Big_int_Z semantic values; native bounded host byte/bit/list/parser utility indices where used',
                         'direct_Rocq_counterpart':None,'general_correspondence_theorem':False,'release_required':True})
     if not all((audit.IMPL/'ocaml'/name).is_file() for name in ('orchestration.ml','orchestration.mli')):
         raise audit.AuditError('historical demo inventory changed; review its classification')

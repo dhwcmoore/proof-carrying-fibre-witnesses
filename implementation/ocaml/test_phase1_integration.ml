@@ -47,3 +47,45 @@ let () =
   assert (verdict_of mismatch=UNDERDETERMINED);
   (match mismatch with Underdetermined r -> assert (List.exists (fun f -> f.finding_outcome=Fail) r.report_replay.replay_record_findings) | _ -> assert false);
   print_endline "phase1 typed integration: PASS (empty campaign; abstract digest; reserved hooks unused)"
+
+(* Byte adapter integration remains submission-free. Policy bytes are opaque:
+   §2.3 semantic load validation and kernel-policy interpretation are residual. *)
+let () =
+  let module B=Phase1_bytes in
+  let model="existing model byte snapshot" and pre="existing preprocessing snapshot" and inf="existing inference snapshot" in
+  let d={cd_model_artifact_digest=B.hash sha256_hex "pcfw.model_artifact.v1" model;
+         cd_preprocessing_digest=B.hash sha256_hex "pcfw.preprocessing_spec.v1" pre;
+         cd_inference_spec_digest=B.hash sha256_hex "pcfw.inference_spec.v1" inf} in
+  let descriptor_bytes=render_context_descriptor d in
+  let policy_bytes="{\"audit_instance_id\":\"ai-0001\"}" in
+  let policy_digest=B.hash sha256_hex "pcfw.policy_payload.v1" policy_bytes in
+  let p=B.bind_policy_bytes sha256_hex ~committed_bytes:policy_bytes ~expected_digest:policy_digest policy_bytes in
+  let m={mv with cm_context_digests=d;cm_policy_hash=policy_digest} in
+  let manifest_bytes=render_manifest m in
+  let parsed=B.manifest manifest_bytes in
+  let md=campaign_manifest_digest sha256_hex parsed in
+  let mc_bytes=B.render(B.Object["digest",B.Text md;"signer",B.Text "release-fixture";"signature",B.Text(hex(Ed25519.sign ~sk:seed ~msg:md))]) in
+  let cw=B.commitment mc_bytes in
+  let complete_bytes="{\"k\":\"complete\",\"v\":{\"body\":0,\"scheme\":\"registry-v0\"}}" in
+  let rbytes="{\"audit_instance_id\":\"ai-0001\",\"campaign_id\":\"cmp-1\",\"completeness\":"^complete_bytes^",\"context_digests\":"^descriptor_bytes^
+      ",\"manifest_digest\":\""^md^"\",\"policy_hash\":\""^policy_digest^"\",\"recorded_results\":[],\"resource_budget\":{\"max_candidates\":"^Big_int_Z.string_of_big_int huge^"}}" in
+  let input=B.bind_record {ti with ti_commitment_wire=cw;ti_manifest=manifest_bytes;ti_policy_document=policy_bytes;ti_policy=p;ti_policy_digest=policy_digest} rbytes in
+  assert(input.ti_completeness=CompletenessComplete{completeness_scheme="registry-v0";completeness_body="0"});
+  let loaded=B.bind_context sha256_hex ~manifest_descriptor:parsed.cm_context_digests descriptor_bytes ~model ~preprocessing:pre ~inference:inf in
+  assert(loaded.loaded_descriptor=descriptor_bytes);
+  let raw=B.transcript_bytes tr in
+  let wire=B.parse_transcript sha256_hex cfg ~n_pre:(n 2) ~n_obs:(n 1) raw in
+  let digest=B.transcript_digest sha256_hex in
+  let bops=pipeline_ops sha256_hex ed25519_verify ed25519_pubkey_valid String.equal
+      (fun q->assert(q=p);d) (fun q->assert(q=p);"ai-0001") (set_transcript_digest base digest) in
+  let vr=validate_campaign bops input in
+  (match vr with ValidCampaign _->()|_->assert false);
+  let output=assess_validated bops input vr (OfflineParse(wire,CtxNotNeeded)) in
+  assert(verdict_of output=UNDERDETERMINED);
+  (match outcome_transcript_evidence output with OfflineTranscript(td,wd)->assert(td=digest tr);assert(wd=B.hash sha256_hex "pcfw.exec_transcript_wire.v1" raw)|_->assert false);
+  let malformed=B.parse_transcript sha256_hex cfg ~n_pre:(n 2) ~n_obs:(n 1) (" "^raw) in
+  assert(verdict_of(assess_validated bops input vr (OfflineParse(malformed,CtxNotNeeded)))=OBSTRUCTED);
+  (* A canonical identity mutation is detected by existing validation. *)
+  let mutated=B.render(match B.decode rbytes with B.Object xs->B.Object(List.map(fun(k,v)->if k="context_digests" then k,B.decode(render_context_descriptor cd) else k,v)xs)|_->assert false) in
+  (match validate_campaign bops {input with ti_record=mutated} with InvalidCampaign(RecordIdentityMismatch "context_digests",_,_)->()|_->assert false);
+  print_endline "PASS: byte integration; canonical snapshots -> existing validation/auth/record -> offline parse/digest -> verdict; opaque policy, no model/capture"

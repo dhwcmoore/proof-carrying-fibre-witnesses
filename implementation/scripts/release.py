@@ -12,6 +12,7 @@ import sys
 
 import audit
 import differential
+import byte_vectors
 
 
 ROOT = audit.IMPL.parent
@@ -79,6 +80,14 @@ def validate_check_log(text, data, harnesses):
     compared = re.findall(r"^PASS: differential battery; (\d+) cases; finite-case evidence only$", text, re.M)
     if compared != [str(len(differential.cases()))]:
         raise audit.AuditError("check log does not confirm the differential battery")
+    byte_checks = re.findall(r"^PASS: byte boundary battery; (\d+) cases; bounded ASCII adapter$", text, re.M)
+    if len(byte_checks) != 1 or int(byte_checks[0]) <= 0:
+        raise audit.AuditError("check log does not confirm byte boundary tests")
+    vectors = re.findall(r"^PASS: independent byte vectors; (\d+) canonical transcript/digest inputs$", text, re.M)
+    if vectors != [str(len(byte_vectors.vectors()))]:
+        raise audit.AuditError("check log does not confirm independent byte vectors")
+    if text.count("PASS: byte integration; canonical snapshots -> existing validation/auth/record -> offline parse/digest -> verdict; opaque policy, no model/capture") != 1:
+        raise audit.AuditError("check log does not confirm scoped byte integration")
     invoked = re.findall(r"^\./ocaml/(test_\w+)$", text, re.M)
     if sorted(invoked) != harnesses:
         raise audit.AuditError("check log does not confirm every harness execution")
@@ -122,7 +131,8 @@ def main():
                "assumption_audit_result": "NOT_RUN", "harness_count": None,
                "harness_result": "NOT_RUN", "manifest_verification_result": "NOT_RUN",
                "integer_structural_audit_result": "NOT_RUN", "differential_result": "NOT_RUN",
-               "integration_harness_result": "NOT_RUN"}
+               "integration_harness_result": "NOT_RUN", "byte_boundary_result": "NOT_RUN",
+               "byte_vector_result": "NOT_RUN"}
     # Invalidate any previous passing summary before starting required checks.
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")
     stage = "metadata"
@@ -161,6 +171,16 @@ def main():
         integers = json.loads((OUTPUT / "integer-correspondence.json").read_text())
         compared = json.loads((OUTPUT / "differential.json").read_text())
         validate_numeric_evidence(integers, compared, data)
+        byte_evidence = json.loads((OUTPUT / "byte-vectors.json").read_text())
+        if byte_evidence["result"] != "PASS" or byte_evidence["vector_count"] != len(byte_vectors.vectors()):
+            raise audit.AuditError("byte vector evidence incomplete")
+        rows = ["\t".join([v["canonical_bytes"], v["digest_input_hex"], v["sha256"]]) for v in byte_evidence["vectors"]]
+        byte_vectors.compare(rows)
+        byte_count = re.findall(r"^PASS: byte boundary battery; (\d+) cases; bounded ASCII adapter$", (OUTPUT / "check.log").read_text(), re.M)
+        summary.update(byte_boundary_result="PASS", byte_boundary_case_count=int(byte_count[0]),
+                       byte_vector_result="PASS", byte_vector_count=byte_evidence["vector_count"],
+                       byte_adapter_formally_verified=False,
+                       policy_semantic_loader_result="NOT_IMPLEMENTED", faithful_transcript_status="UNRESOLVED")
         integration = [h for h in harnesses if h == "test_phase1_integration"]
         if not integration:
             raise audit.AuditError("typed integration harness missing")
@@ -173,7 +193,7 @@ def main():
                        differential_actual_Gallina_case_count=compared["actual_Gallina_case_count"],
                        differential_reference_Z_case_count=compared["reference_Z_case_count"],
                        integration_harness_count=len(integration), integration_harness_result="PASS",
-                       integration_boundary="empty typed campaign; existing auth/record checks; abstract digest; no model/parser/capture hooks")
+                       integration_boundary="empty campaign; canonical ASCII byte adapters, existing auth/record checks, derived completeness, offline transcript/digest; opaque policy; no model/capture")
         # Detect source changes during the build as well as before it.
         stage = "manifest recheck"
         verify_manifest(ROOT, git_files(ROOT))

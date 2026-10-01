@@ -1,6 +1,6 @@
 # Implementation status and historical delivery ledger
 
-**Current implementation note (Closure Batch 2, 2026-10-01):** Phase 1 is OPEN.
+**Current implementation note (Closure Batch 3, 2026-10-01):** Phase 1 is OPEN.
 The former admitted obligations are proved; the current build compiles, links
 and executes the extracted outputs against the configured Zarith installation.
 All required extraction units use bigint mappings. The native mirror is retained
@@ -10,6 +10,13 @@ fail-closed inspects all substantive theorem-like declarations, retaining legacy
 requests as coverage requirements. `make release` records current counts and
 manifest/build evidence without declaring closure. See [TRUST.md](TRUST.md),
 [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md) and [PHASE_1_STATUS.md](PHASE_1_STATUS.md).
+
+Batch 3 additionally runs a bounded hand-written ASCII byte adapter, derives
+record completeness, checks descriptor/artifact snapshots and tests offline
+transcript decoding/canonical digest input. These are trusted executable checks,
+not formal loader/parser correctness. Full semantic policy loading and general
+`to_cv` conformance remain open; the injectivity premise cannot be a universal
+SHA-256 fact. See [PHASE_1_BYTE_BINDING.md](PHASE_1_BYTE_BINDING.md).
 
 The chronological skeleton/build/unit accounts below are historical. Their
 then-current counts, admitted obligations and library limitations are not

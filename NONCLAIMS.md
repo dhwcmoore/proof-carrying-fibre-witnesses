@@ -29,3 +29,11 @@ All required extracted paths now use the existing arbitrary-precision mappings.
 The structural gate, finite differential cases and empty-campaign integration
 harness strengthen executable evidence within their stated boundaries; they do
 not discharge F.3 or establish general executable equivalence.
+
+Batch 3 adds bounded ASCII byte adapters, record-derived completeness and a
+concrete transcript digest-input builder. It does not establish general parser
+correctness, full Unicode conformance, semantic policy/inference/registry loading,
+unique encoding of information-losing typed projections, or transcript/context
+identity from the event-array bytes. Formal loader/`to_cv` premises remain.
+Universal SHA-256 policy-digest injectivity is not an available cryptographic
+fact. No conditional policy-binding theorem is instantiated with that property.

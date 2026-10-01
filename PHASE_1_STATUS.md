@@ -21,6 +21,17 @@ campaign integration harness pass. This is new machine evidence awaiting review,
 not reviewer concurrence or a Phase-1 closure disposition. See
 [PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md](PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md).
 
+**Closure Batch 3 evidence update (2026-10-01):** a trusted ASCII byte adapter
+now derives record completeness, decodes descriptors/transcripts, checks supplied
+artifact snapshots and constructs concrete transcript digest inputs. The empty
+campaign integration and adversarial/independent-byte tests pass. This does not
+supply a Gallina parser/loader/`to_cv` correctness proof; policy semantic loading,
+context dimensions/realisation and `faithful_transcript` remain unresolved.
+The abstract policy-digest injectivity contract cannot be instantiated as universal
+SHA-256 injectivity. No formal statement or reviewer disposition changes.
+See [PHASE_1_BYTE_BINDING.md](PHASE_1_BYTE_BINDING.md) for current evidence; older
+unit accounts below retain their original formal scope.
+
 This ledger is author-prepared status. Every "done" row is source-reviewed by
 the designated reviewer and machine-checked on the implementation machine
 (`coqc` / `ocamlc` 8.18.0 / 4.14.1); the reviewer's environment lacks the
@@ -193,7 +204,7 @@ Zarith installation used for these builds.
 | boundary conditions (stage 2) | `adapter_candidate_wf` / `transcript_stage2_wf` formalised; `adapter_candidate_wf` discharged from stage 1 -- **proved** |
 | capture / replay correspondence | **OPEN** -- `capture` is not modelled; `replay`'s dependence on `op_stage2_check` is localised (`replay_op_stage2_local`) but no `capture` <-> `replay` theorem |
 | canonical encoding | **PARTIAL** -- `CanonicalV1.render_manifest` (`canonicalise_v1 ∘ to_cv` for the campaign-manifest schema, `render_manifest_frozen_vector` = the §2.2.5 payload byte-for-byte) and `digest_v1` / `campaign_manifest_digest` are concrete; the general `canonical_value` tree + the remaining `to_cv` rows are open |
-| cross-language agreement battery | **PARTIAL, Batch-2 evidence** -- finite actual Gallina and labelled exact `Z` reference comparisons pass; the mirror is non-normative and excluded. No general Rocq/OCaml correspondence theorem; coverage is bounded as described in the Batch-2 report |
+| cross-language agreement battery | **PARTIAL, Batch-2/3 evidence** -- finite actual Gallina and labelled exact `Z` reference comparisons pass; the mirror is non-normative and excluded. No general Rocq/OCaml correspondence theorem; coverage is bounded as described in the Batch-2 report, with independent Batch-3 ASCII transcript byte/digest vectors |
 
 ## O1/O2/O3 functions + shared-`C` wiring -- reviewer source review PASSED
 

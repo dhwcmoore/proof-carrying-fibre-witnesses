@@ -242,3 +242,13 @@ Batch-2 empty typed campaign test,
 and the final closure review are all separate, still-open obligations. See
 `PHASE_1_STATUS.md` for exact, current status.
 
+
+## Current byte adapter (Closure Batch 3)
+
+`ocaml/phase1_bytes.ml` supplies trusted bounded ASCII canonical-byte decoding,
+record-derived completeness, descriptor/snapshot checks and an offline transcript
+parser/digest-input builder. `make check` runs its adversarial harness and independent
+Python byte vectors. The integration remains submission-free and uses opaque
+policy bytes; it does not implement §2.3 semantic loading or model/capture code.
+See [the complete boundary inventory](../PHASE_1_BYTE_BINDING.md) and
+[TRUST.md](../TRUST.md). No existing Rocq source or theorem statement changes.

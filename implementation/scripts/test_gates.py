@@ -16,6 +16,7 @@ import audit
 import release
 import differential
 import integer_surface
+import byte_vectors
 
 
 class AuditTests(unittest.TestCase):
@@ -156,7 +157,10 @@ class ReleaseTests(unittest.TestCase):
                  "PASS: project source token audit; 0 section-premise declarations inventoried separately",
                  "./ocaml/test_fixture",
                  "PASS: integer structural audit; 1 extracted interfaces; no native int or historical mirror dependency",
-                 f"PASS: differential battery; {len(differential.cases())} cases; finite-case evidence only"]
+                 f"PASS: differential battery; {len(differential.cases())} cases; finite-case evidence only",
+                 "PASS: byte boundary battery; 1 cases; bounded ASCII adapter",
+                 f"PASS: independent byte vectors; {len(byte_vectors.vectors())} canonical transcript/digest inputs",
+                 "PASS: byte integration; canonical snapshots -> existing validation/auth/record -> offline parse/digest -> verdict; opaque policy, no model/capture"]
         release.validate_check_log("\n".join(lines) + "\n", data, ["test_fixture"])
         for i in range(len(lines)):
             with self.subTest(removed=lines[i]), self.assertRaises(audit.AuditError):
@@ -245,6 +249,19 @@ class IntegerAndDifferentialGateTests(unittest.TestCase):
             with self.assertRaises(audit.AuditError):differential.compare(['2'],actual,fixture)
         differential.compare(['2'],['2'],fixture)
         self.assertEqual(fixture[0]['result'],'PASS')
+
+
+class ByteVectorGateTests(unittest.TestCase):
+    def test_missing_and_mutated_digest_input(self):
+        import hashlib
+        rows=[]
+        for value in byte_vectors.vectors():
+            canonical=json.dumps(value,sort_keys=True,separators=(',',':'),ensure_ascii=True)
+            raw=b'pcfw.exec_transcript.v1\x1f'+canonical.encode('ascii')
+            rows.append('\t'.join([canonical,raw.hex(),hashlib.sha256(raw).hexdigest()]))
+        self.assertEqual(len(byte_vectors.compare(rows)),len(byte_vectors.vectors()))
+        for bad in (rows[:-1],rows+rows, [rows[0].replace('70636677','00636677')]+rows[1:]):
+            with self.assertRaises(audit.AuditError):byte_vectors.compare(bad)
 
 
 if __name__ == "__main__":

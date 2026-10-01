@@ -45,3 +45,5 @@ implementation/ocaml/test_integer_differential
 # Generated release evidence and Python gate caches
 implementation/release-audit/
 __pycache__/
+
+implementation/ocaml/test_byte_boundaries

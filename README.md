@@ -28,6 +28,8 @@ regeneration, a fail-closed assumption audit of all substantive theorem-like
 declarations plus the legacy requested obligations, and all existing OCaml
 harnesses, the structural bigint/mirror audit and the finite differential
 comparator. See [the Batch-2 evidence report](PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md).
+The [Batch-3 byte-binding report](PHASE_1_BYTE_BINDING.md) records the bounded
+ASCII byte adapters, remaining loader premises and concrete digest-input tests.
 Kernel closure does not discharge theorem premises.
 
 From the repository root, `make release` verifies `MANIFEST.sha256`, cleans,

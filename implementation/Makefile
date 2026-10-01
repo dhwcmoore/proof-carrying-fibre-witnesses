@@ -1,4 +1,4 @@
-.PHONY: check rocq ocaml check-kernel-trust check-source-trust assumptions test clean gate-tests release integer-audit differential
+.PHONY: check rocq ocaml check-kernel-trust check-source-trust assumptions test clean gate-tests release integer-audit differential byte-vectors
 
 # Keep inspection after compilation, including when the caller uses make -j.
 .NOTPARALLEL:
@@ -11,7 +11,7 @@ ZARITH ?= $(OCAML_LIB)/zarith
 SHALIB ?= $(OCAML_LIB)/sha
 export OCAML_LIB ZARITH SHALIB
 
-check: check-source-trust rocq ocaml assumptions test integer-audit differential
+check: check-source-trust rocq ocaml assumptions test integer-audit differential byte-vectors
 
 rocq:
 	coqc -Q rocq PCFW rocq/FibreWitnessKernel.v
@@ -82,10 +82,16 @@ test: ocaml rocq
 	./ocaml/test_manifest_authentication
 	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_phase1_integration.mli
 	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_phase1_integration.ml
-	ocamlc -custom -I ocaml -I $(ZARITH) -I $(SHALIB) $(ZARITH)/zarith.cma $(SHALIB)/sha.cma -cclib -lsha_stubs -cclib -L$(SHALIB) ocaml/manifest_crypto_fixture.cmo ocaml/extracted_phase1_integration.cmo ocaml/test_phase1_integration.ml -o ocaml/test_phase1_integration
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/phase1_bytes.ml
+	ocamlc -custom -I ocaml -I $(ZARITH) -I $(SHALIB) $(ZARITH)/zarith.cma $(SHALIB)/sha.cma -cclib -lsha_stubs -cclib -L$(SHALIB) ocaml/manifest_crypto_fixture.cmo ocaml/extracted_phase1_integration.cmo ocaml/phase1_bytes.cmo ocaml/test_phase1_integration.ml -o ocaml/test_phase1_integration
 	./ocaml/test_phase1_integration
+	ocamlc -custom -I ocaml -I $(ZARITH) -I $(SHALIB) $(ZARITH)/zarith.cma $(SHALIB)/sha.cma -cclib -lsha_stubs -cclib -L$(SHALIB) ocaml/manifest_crypto_fixture.cmo ocaml/extracted_phase1_integration.cmo ocaml/phase1_bytes.cmo ocaml/test_byte_boundaries.ml -o ocaml/test_byte_boundaries
+	./ocaml/test_byte_boundaries
 	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_phase1_integration.cmo ocaml/extracted_stage2.cmo ocaml/extracted_transcript_digest.cmo ocaml/extracted_manifest_auth.cmo ocaml/test_integer_differential.ml -o ocaml/test_integer_differential
 	./ocaml/test_integer_differential
+
+byte-vectors: test
+	python3 scripts/byte_vectors.py
 
 integer-audit: test
 	python3 scripts/integer_surface.py
@@ -113,5 +119,5 @@ clean:
 	rm -f ocaml/extracted_manifest_auth.ml ocaml/extracted_manifest_auth.mli
 	rm -f ocaml/extracted_orchestration.ml ocaml/extracted_orchestration.mli
 	rm -f ocaml/extracted_fibre_witness_kernel.ml ocaml/extracted_fibre_witness_kernel.mli
-	rm -f ocaml/extracted_phase1_integration.ml ocaml/extracted_phase1_integration.mli ocaml/test_phase1_integration ocaml/test_integer_differential
+	rm -f ocaml/extracted_phase1_integration.ml ocaml/extracted_phase1_integration.mli ocaml/test_phase1_integration ocaml/test_integer_differential ocaml/test_byte_boundaries
 	rm -f .lia.cache
