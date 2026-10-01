@@ -1,3 +1,5 @@
+(* Historical NON-NORMATIVE demo interface; excluded from make check/release.
+   Its machine integers and reduced records have no correspondence proof. *)
 type digest = string
 type bytes = string
 type policy_document = string
@@ -143,4 +145,3 @@ val replay : primitive_ops -> authenticated_campaign -> context_bundle -> verifi
 val decide : primitive_ops -> replay_result -> authenticated_campaign -> trusted_inputs -> exec_transcript -> transcript_evidence -> commitment_evidence -> assessment_outcome
 val assess_validated : primitive_ops -> trusted_inputs -> validation_result -> transcript_source -> assessment_outcome
 val verdict_of : assessment_outcome -> campaign_verdict
-

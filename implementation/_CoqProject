@@ -24,3 +24,4 @@ rocq/ManifestPipeline.v
 rocq/ExtractStage2.v
 rocq/ExtractManifestAuthentication.v
 rocq/ExtractTranscriptDigest.v
+rocq/ExtractPhase1Integration.v

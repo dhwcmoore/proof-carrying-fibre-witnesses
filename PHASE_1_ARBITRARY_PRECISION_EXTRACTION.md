@@ -1,5 +1,10 @@
 # Phase 1 -- closure-report obligation 3: arbitrary-precision extracted OCaml
 
+**Historical two-unit report.** Current Batch 2 converts the remaining drivers,
+excludes the native mirror, and adds bounded integration/differential evidence.
+The dispositions and then-current residuals below are preserved as history;
+see [the current Batch-2 report](PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md).
+
 Date: 2026-09-13/14. **First unit** (`ExtractOrchestration.v` +
 `ExtractFibreWitnessKernel.v`, archives `phase1_arbitrary_precision_extraction_r{1,2}`):
 revision 1 HELD -- candidate-coordinate passage untested, two misleading "the

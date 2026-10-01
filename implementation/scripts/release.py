@@ -11,6 +11,7 @@ import subprocess
 import sys
 
 import audit
+import differential
 
 
 ROOT = audit.IMPL.parent
@@ -72,9 +73,30 @@ def validate_check_log(text, data, harnesses):
         raise audit.AuditError("check log does not confirm the complete assumption audit")
     if len(re.findall(r"^PASS: project source token audit;", text, re.M)) != 1:
         raise audit.AuditError("check log does not confirm the source token audit")
+    integer = re.findall(r"^PASS: integer structural audit; (\d+) extracted interfaces; no native int or historical mirror dependency$", text, re.M)
+    if integer != [str(len(data["extraction_modules"]))]:
+        raise audit.AuditError("check log does not confirm the integer structural audit")
+    compared = re.findall(r"^PASS: differential battery; (\d+) cases; finite-case evidence only$", text, re.M)
+    if compared != [str(len(differential.cases()))]:
+        raise audit.AuditError("check log does not confirm the differential battery")
     invoked = re.findall(r"^\./ocaml/(test_\w+)$", text, re.M)
     if sorted(invoked) != harnesses:
         raise audit.AuditError("check log does not confirm every harness execution")
+
+
+def validate_numeric_evidence(integers, compared, data):
+    if integers["result"] != "PASS" or integers["extracted_module_count"] != len(data["extraction_modules"]) or integers["native_int_extracted_interface_count"] != 0:
+        raise audit.AuditError("integer evidence is incomplete")
+    cases = differential.cases()
+    recorded = compared["cases"]
+    if compared["result"] != "PASS" or compared["case_count"] != len(cases) or len(recorded) != len(cases):
+        raise audit.AuditError("differential evidence is incomplete")
+    for expected, actual in zip(cases, recorded):
+        if any(actual[key] != expected[key] for key in ("input", "oracle_expression", "oracle_kind")) or actual["result"] != "PASS" or actual["oracle_result"] != actual["ocaml_result"]:
+            raise audit.AuditError("differential case evidence differs")
+    actual_count = sum(c["oracle_kind"].startswith("actual Gallina") for c in recorded)
+    if compared["actual_Gallina_case_count"] != actual_count or compared["reference_Z_case_count"] != len(recorded) - actual_count:
+        raise audit.AuditError("differential oracle counts differ")
 
 
 def run_make(target, log):
@@ -98,7 +120,9 @@ def main():
                "commit_sha": None, "toolchain_versions": {}, "substantive_module_count": None,
                "coqchk_result": "NOT_RUN", "theorem_assumption_audit_count": None,
                "assumption_audit_result": "NOT_RUN", "harness_count": None,
-               "harness_result": "NOT_RUN", "manifest_verification_result": "NOT_RUN"}
+               "harness_result": "NOT_RUN", "manifest_verification_result": "NOT_RUN",
+               "integer_structural_audit_result": "NOT_RUN", "differential_result": "NOT_RUN",
+               "integration_harness_result": "NOT_RUN"}
     # Invalidate any previous passing summary before starting required checks.
     summary_path.write_text(json.dumps(summary, indent=2) + "\n")
     stage = "metadata"
@@ -134,11 +158,27 @@ def main():
         stage = "check evidence"
         validate_check_log((OUTPUT / "check.log").read_text(), data, harnesses)
         summary.update(coqchk_result="PASS", assumption_audit_result="PASS", harness_result="PASS")
+        integers = json.loads((OUTPUT / "integer-correspondence.json").read_text())
+        compared = json.loads((OUTPUT / "differential.json").read_text())
+        validate_numeric_evidence(integers, compared, data)
+        integration = [h for h in harnesses if h == "test_phase1_integration"]
+        if not integration:
+            raise audit.AuditError("typed integration harness missing")
+        summary.update(integer_structural_audit_result="PASS",
+                       exact_integer_extracted_module_count=integers["extracted_module_count"],
+                       native_int_extracted_interface_count=integers["native_int_extracted_interface_count"],
+                       historical_native_demo_count=integers["historical_native_demo_count"],
+                       normative_wrapper_count=integers["normative_wrapper_count"],
+                       differential_result="PASS", differential_case_count=compared["case_count"],
+                       differential_actual_Gallina_case_count=compared["actual_Gallina_case_count"],
+                       differential_reference_Z_case_count=compared["reference_Z_case_count"],
+                       integration_harness_count=len(integration), integration_harness_result="PASS",
+                       integration_boundary="empty typed campaign; existing auth/record checks; abstract digest; no model/parser/capture hooks")
         # Detect source changes during the build as well as before it.
         stage = "manifest recheck"
         verify_manifest(ROOT, git_files(ROOT))
         summary["verification_status"] = "PASS"
-    except (audit.AuditError, OSError, subprocess.SubprocessError) as error:
+    except (audit.AuditError, OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         if stage.startswith("manifest"):
             summary["manifest_verification_result"] = "FAIL"
         summary["failed_stage"] = stage

@@ -26,7 +26,9 @@ make check
 runs the project-owned source-token gate, `coqc` / `coqchk`, extraction
 regeneration, a fail-closed assumption audit of all substantive theorem-like
 declarations plus the legacy requested obligations, and all existing OCaml
-harnesses. Kernel closure does not discharge theorem premises.
+harnesses, the structural bigint/mirror audit and the finite differential
+comparator. See [the Batch-2 evidence report](PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md).
+Kernel closure does not discharge theorem premises.
 
 From the repository root, `make release` verifies `MANIFEST.sha256`, cleans,
 runs the full check and records mechanical evidence in

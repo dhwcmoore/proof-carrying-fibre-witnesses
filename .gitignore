@@ -32,6 +32,8 @@ implementation/ocaml/test_stage1
 implementation/ocaml/test_stage1_wrapper
 implementation/ocaml/test_stage2
 implementation/ocaml/test_transcript_digest
+implementation/ocaml/test_phase1_integration
+implementation/ocaml/test_integer_differential
 
 # Delivery archive bundles (reproducible; latest revision published as a Release)
 *.zip

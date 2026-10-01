@@ -1,3 +1,7 @@
+(* Historical NON-NORMATIVE demo. Not compiled or linked by make check/release.
+   Machine-int arithmetic and data representations differ from Rocq extraction.
+   No Rocq/OCaml equivalence is asserted. The context-bundle regression now uses
+   Extracted_orchestration. Keep this file only as historical source evidence. *)
 include struct
   type digest = string
   type bytes = string
@@ -185,4 +189,3 @@ include struct
 
   let verdict_of = function Inadmissible _ -> INADMISSIBLE | Exact _ -> EXACT | Obstructed _ -> OBSTRUCTED | Underdetermined _ -> UNDERDETERMINED
 end
-

@@ -3,6 +3,7 @@
 
 from contextlib import redirect_stderr, redirect_stdout
 import io
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -13,6 +14,8 @@ from unittest.mock import patch
 
 import audit
 import release
+import differential
+import integer_surface
 
 
 class AuditTests(unittest.TestCase):
@@ -147,11 +150,13 @@ class ReleaseTests(unittest.TestCase):
                     release.check_plan(data, impl)
 
     def test_check_evidence_missing_required_steps(self):
-        data = {"compiled_modules": ["M", "ExtractM"], "release_set": ["M.ok"]}
+        data = {"compiled_modules": ["M", "ExtractM"], "release_set": ["M.ok"], "extraction_modules": ["ExtractM"]}
         lines = ["coqc -Q rocq PCFW rocq/M.v", "coqc -Q rocq PCFW rocq/ExtractM.v",
                  "Modules were successfully checked", "PASS: 1 release declarations inspected; no global axioms",
                  "PASS: project source token audit; 0 section-premise declarations inventoried separately",
-                 "./ocaml/test_fixture"]
+                 "./ocaml/test_fixture",
+                 "PASS: integer structural audit; 1 extracted interfaces; no native int or historical mirror dependency",
+                 f"PASS: differential battery; {len(differential.cases())} cases; finite-case evidence only"]
         release.validate_check_log("\n".join(lines) + "\n", data, ["test_fixture"])
         for i in range(len(lines)):
             with self.subTest(removed=lines[i]), self.assertRaises(audit.AuditError):
@@ -180,6 +185,66 @@ class ReleaseTests(unittest.TestCase):
             self.assertEqual(summary["verification_status"], "FAILED")
             self.assertEqual(summary["release_status"], "OPEN / NOT YET CLOSED")
             self.assertEqual(summary["failed_stage"], "manifest")
+
+
+class IntegerAndDifferentialGateTests(unittest.TestCase):
+    def test_structural_native_integer_and_legacy_rejection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            binary=integer_surface.compile_checker(root)
+            mli=root/'fixture.mli'
+            for typ in ('int', 'Stdlib.int', 'Int.t', 'Stdlib.Int.t', 'int list', 'int -> Big_int_Z.big_int', 'Big_int_Z.big_int * int'):
+                mli.write_text('(* harmless int mention *)\nval budget : '+typ+'\n')
+                with self.subTest(typ=typ),self.assertRaises(audit.AuditError):
+                    integer_surface.inspect(binary,[('interface',mli)])
+            mli.write_text('(* int (* int *) *)\nval budget : Big_int_Z.big_int\n')
+            integer_surface.inspect(binary,[('interface',mli)])
+            ml=root/'fixture.ml'
+            for code in ('open Orchestration', 'module S = Orchestration', 'let charge = Orchestration.charge', 'type t = Orchestration.fuel_ledger'):
+                ml.write_text(code+'\n')
+                with self.subTest(code=code),self.assertRaises(audit.AuditError):
+                    integer_surface.inspect(binary,[('wrapper',ml)])
+            ml.write_text('(* open Orchestration *)\nlet text = "Orchestration.charge"\nmodule S=Extracted_orchestration\n')
+            integer_surface.inspect(binary,[('wrapper',ml)])
+            mli.write_text('val broken : (\n')
+            with self.assertRaises(audit.AuditError):
+                integer_surface.inspect(binary,[('interface',mli)])
+
+    def test_native_mirror_link_rejected(self):
+        for ext in ('ml','mli','cmo','cmx'):
+            with self.assertRaises(audit.AuditError):
+                integer_surface.check_link_plan('test:\n\tocamlc ocaml/orchestration.'+ext+'\n')
+        integer_surface.check_link_plan('test:\n\tocamlc ocaml/extracted_orchestration.cmo\n')
+
+    def test_numeric_summary_requires_every_case(self):
+        cases=differential.cases()
+        recorded=[dict(c, result='PASS', oracle_result='fixture', ocaml_result='fixture') for c in cases]
+        direct=sum(c['oracle_kind'].startswith('actual Gallina') for c in cases)
+        evidence={'result':'PASS','case_count':len(cases),'cases':recorded,
+                  'actual_Gallina_case_count':direct,'reference_Z_case_count':len(cases)-direct}
+        integers={'result':'PASS','extracted_module_count':1,'native_int_extracted_interface_count':0}
+        data={'extraction_modules':['ExtractFixture']}
+        release.validate_numeric_evidence(integers,evidence,data)
+        missing=copy.deepcopy(evidence);missing['cases']=[]
+        wrong=copy.deepcopy(evidence);wrong['cases'][0]['ocaml_result']='wrong'
+        changed=copy.deepcopy(evidence);changed['cases'][0]['input']=['wrong']
+        counts=copy.deepcopy(evidence);counts['reference_Z_case_count']+=1
+        for bad in (missing,wrong,changed,counts):
+            with self.assertRaises(audit.AuditError):release.validate_numeric_evidence(integers,bad,data)
+        with self.assertRaises(audit.AuditError):
+            release.validate_numeric_evidence(dict(integers,native_int_extracted_interface_count=1),evidence,data)
+
+    def test_differential_missing_duplicate_error_and_mismatch(self):
+        good='PCFW_CASE:0\n = 2%Z\n : Z\n'
+        self.assertEqual(differential.parse_oracle(good,1),['2'])
+        for bad in ('',good+good,good.replace(':0',':1'),good+'Error: failed\n'):
+            with self.subTest(bad=bad),self.assertRaises(audit.AuditError):
+                differential.parse_oracle(bad,1)
+        fixture=[{'input':['add','1','1']}]
+        for actual in ([],['3']):
+            with self.assertRaises(audit.AuditError):differential.compare(['2'],actual,fixture)
+        differential.compare(['2'],['2'],fixture)
+        self.assertEqual(fixture[0]['result'],'PASS')
 
 
 if __name__ == "__main__":

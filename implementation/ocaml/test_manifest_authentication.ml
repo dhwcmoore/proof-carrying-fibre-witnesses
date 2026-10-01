@@ -22,150 +22,13 @@
    here. *)
 
 module A = Extracted_manifest_auth
+let big = Big_int_Z.big_int_of_string
+let natural value =
+  if Big_int_Z.sign_big_int value < 0 then invalid_arg "negative nat fixture";
+  value
+let n value = natural (Big_int_Z.big_int_of_int value)
 
-(* ---------- hex ---------- *)
-let unhex s =
-  let n = String.length s / 2 in
-  String.init n (fun i -> Char.chr (int_of_string ("0x" ^ String.sub s (2*i) 2)))
-let hex b =
-  String.concat "" (List.init (String.length b)
-    (fun i -> Printf.sprintf "%02x" (Char.code b.[i])))
-
-(* ---------- SHA-256 (real) ---------- *)
-let sha256_hex (b : string) : string = Sha256.to_hex (Sha256.string b)
-
-(* ---------- Ed25519 verify (pure OCaml, RFC 8032) ---------- *)
-module Ed25519 = struct
-  let p = Z.(sub (pow (of_int 2) 255) (of_int 19))
-  let el = Z.(add (pow (of_int 2) 252)
-                  (of_string "27742317777372353535851937790883648493"))
-  let d =
-    Z.(erem (mul (sub p (of_int 121665)) (invert (of_int 121666) p)) p)  (* -121665/121666 *)
-  let ( %! ) a b = Z.erem a b
-  let modp a = a %! p
-  let inv a = Z.invert a p
-
-  let le_of_string s =
-    let r = ref Z.zero in
-    for i = String.length s - 1 downto 0 do
-      r := Z.(add (shift_left !r 8) (of_int (Char.code s.[i])))
-    done; !r
-
-  (* recover x from y and sign bit *)
-  let x_recover y sign =
-    let y2 = modp Z.(mul y y) in
-    let u = modp Z.(sub y2 one) in
-    let v = modp Z.(add (mul d y2) one) in
-    let xx = modp Z.(mul u (inv v)) in
-    let exp = Z.(div (add p (of_int 3)) (of_int 8)) in
-    let x = ref (Z.powm xx exp p) in
-    if not (Z.equal (modp Z.(sub (mul !x !x) xx)) Z.zero) then begin
-      let sq = Z.powm (Z.of_int 2) (Z.div (Z.sub p Z.one) (Z.of_int 4)) p in
-      x := modp Z.(mul !x sq)
-    end;
-    if not (Z.equal (modp Z.(sub (mul !x !x) xx)) Z.zero) then None
-    (* RFC 8032 5.1.3: if x = 0 and the sign bit is 1, decoding fails *)
-    else if Z.equal !x Z.zero && sign = 1 then None
-    else begin
-      if Z.(equal (!x %! of_int 2) one) <> (sign = 1) then x := modp (Z.sub p !x);
-      Some !x
-    end
-
-  let decompress (b : string) =
-    if String.length b <> 32 then None else begin
-      let n = le_of_string b in
-      let sign = Z.(to_int (shift_right n 255)) in
-      let y = Z.(logand n (sub (pow (of_int 2) 255) one)) in
-      if Z.geq y p then None
-      else match x_recover y sign with
-        | None -> None
-        | Some x -> Some (x, y)
-      end
-
-  (* twisted Edwards a = -1 affine addition *)
-  let add (x1,y1) (x2,y2) =
-    let dxy = modp Z.(mul (mul d (mul x1 x2)) (mul y1 y2)) in
-    let x3 = modp Z.(mul (add (mul x1 y2) (mul y1 x2)) (inv (add one dxy))) in
-    let y3 = modp Z.(mul (add (mul y1 y2) (mul x1 x2)) (inv (sub one dxy))) in
-    (x3, y3)
-
-  let scalar k pt =
-    let acc = ref (Z.zero, Z.one) and base = ref pt and n = ref k in
-    while Z.gt !n Z.zero do
-      if Z.(equal (!n %! of_int 2) one) then acc := add !acc !base;
-      base := add !base !base;
-      n := Z.shift_right !n 1
-    done; !acc
-
-  let base =
-    let by = modp Z.(mul (of_int 4) (inv (of_int 5))) in
-    match x_recover by 0 with Some bx -> (bx, by) | None -> assert false
-
-  let is_identity (x, y) = Z.equal x Z.zero && Z.equal y Z.one
-  (* a point has order dividing the cofactor 8 iff [8]P is the identity *)
-  let low_order pt = is_identity (scalar (Z.of_int 8) pt)
-
-  (* trust-anchor key validation: 64 lowercase hex, decodes to a canonical,
-     non-small-order edwards25519 point *)
-  let valid_pubkey_hex (h : string) : bool =
-    String.length h = 64
-    && String.for_all (fun c -> (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) h
-    && (match decompress (unhex h) with
-        | Some a -> not (low_order a)
-        | None -> false)
-
-  let byte_at z i = Z.to_int (Z.logand (Z.shift_right z (8 * i)) (Z.of_int 255))
-
-  let compress (x, y) =
-    let s = Bytes.create 32 in
-    for i = 0 to 31 do Bytes.set s i (Char.chr (byte_at y i)) done;
-    if Z.(equal (x %! of_int 2) one) then
-      Bytes.set s 31 (Char.chr (Char.code (Bytes.get s 31) lor 128));
-    Bytes.to_string s
-
-  let le_to_string n z = String.init n (fun i -> Char.chr (byte_at z i))
-
-  let clamp32 (b : string) =
-    let a = Bytes.of_string b in
-    Bytes.set a 0 (Char.chr (Char.code (Bytes.get a 0) land 248));
-    Bytes.set a 31 (Char.chr ((Char.code (Bytes.get a 31) land 127) lor 64));
-    Bytes.to_string a
-
-  let sign ~sk ~msg =
-    let h = Sha512.to_bin (Sha512.string sk) in
-    let a = le_of_string (clamp32 (String.sub h 0 32)) in
-    let prefix = String.sub h 32 32 in
-    let bigA = compress (scalar a base) in
-    let r = Z.erem (le_of_string (Sha512.to_bin (Sha512.string (prefix ^ msg)))) el in
-    let bigR = compress (scalar r base) in
-    let k = Z.erem (le_of_string (Sha512.to_bin (Sha512.string (bigR ^ bigA ^ msg)))) el in
-    let s = Z.erem (Z.add r (Z.mul k a)) el in
-    bigR ^ le_to_string 32 s
-
-  let pubkey ~sk =
-    let h = Sha512.to_bin (Sha512.string sk) in
-    compress (scalar (le_of_string (clamp32 (String.sub h 0 32))) base)
-
-  let verify ~pub ~sig_ ~msg =
-    if String.length pub <> 32 || String.length sig_ <> 64 then false
-    else match decompress pub, decompress (String.sub sig_ 0 32) with
-    | Some a, Some r ->
-      let s = le_of_string (String.sub sig_ 32 32) in
-      if Z.geq s el then false
-      else begin
-        let h = Sha512.to_bin (Sha512.string
-                  (String.sub sig_ 0 32 ^ pub ^ msg)) in
-        let k = Z.erem (le_of_string h) el in
-        let lhs = scalar s base in
-        let rhs = add r (scalar k a) in
-        Z.equal (fst lhs) (fst rhs) && Z.equal (snd lhs) (snd rhs)
-      end
-    | _ -> false
-end
-
-let ed25519_verify (pub : string) (sig_ : string) (msg : string) : bool =
-  Ed25519.verify ~pub ~sig_ ~msg
-let ed25519_pubkey_valid (k : string) : bool = Ed25519.valid_pubkey_hex (hex k)
+open Manifest_crypto_fixture
 
 (* ---------- views ---------- *)
 let cd : A.context_descriptor =
@@ -182,11 +45,11 @@ let wire ~d ~s ~sg : A.manifest_commitment_wire =
 let ta signers keys : A.trust_anchor =
   { A.ta_authorised_signers = signers; A.ta_keys = keys }
 let cfg tanchor : A.verifier_config =
-  { A.max_candidates = 0; A.max_wire_bytes = 0; A.max_transcript_bytes = 0;
-    A.max_fuel = 0; A.model_call_fuel = 0; A.max_fuel_per_candidate = 0;
-    A.schedule = { A.commitment_parse_fuel = 0; A.signature_verify_fuel = 0;
-      A.manifest_bind_fuel = 0; A.record_bind_fuel = 0; A.preflight_fuel = 0;
-      A.stage1_base_fuel = 0; A.stage1_per_byte_fuel = 0 };
+  { A.max_candidates = n 0; A.max_wire_bytes = n 0; A.max_transcript_bytes = n 0;
+    A.max_fuel = n 0; A.model_call_fuel = n 0; A.max_fuel_per_candidate = n 0;
+    A.schedule = { A.commitment_parse_fuel = n 0; A.signature_verify_fuel = n 0;
+      A.manifest_bind_fuel = n 0; A.record_bind_fuel = n 0; A.preflight_fuel = n 0;
+      A.stage1_base_fuel = n 0; A.stage1_per_byte_fuel = n 0 };
     A.config_trust_anchor = tanchor }
 
 
@@ -329,39 +192,39 @@ let () =
   assert (A.ld_mismatch deq [d1; d2] [d1; d2] = None);
   assert (A.ld_mismatch deq [] [] = None);
   (* reorder -> least differing index 0 *)
-  assert (A.ld_mismatch deq [d1; d2] [d2; d1] = Some 0);
+  assert (A.ld_mismatch deq [d1; d2] [d2; d1] = Some (n 0));
   (* one element changed mid-list -> that index, not a later one *)
-  assert (A.ld_mismatch deq [d1; d2; d3] [d1; d3; d3] = Some 1);
+  assert (A.ld_mismatch deq [d1; d2; d3] [d1; d3; d3] = Some (n 1));
   (* add (manifest longer) -> first length-divergence index *)
-  assert (A.ld_mismatch deq [d1; d2; d3] [d1; d2] = Some 2);
+  assert (A.ld_mismatch deq [d1; d2; d3] [d1; d2] = Some (n 2));
   (* remove (manifest shorter) -> first length-divergence index *)
-  assert (A.ld_mismatch deq [d1; d2] [d1; d2; d3] = Some 2);
+  assert (A.ld_mismatch deq [d1; d2] [d1; d2; d3] = Some (n 2));
   (* duplicate where a distinct digest was expected *)
-  assert (A.ld_mismatch deq [d1; d1] [d1; d2] = Some 1);
+  assert (A.ld_mismatch deq [d1; d1] [d1; d2] = Some (n 1));
   (* least index reported: agree on a 2-element prefix, diverge at 2 *)
-  assert (A.ld_mismatch deq [d1; d2; d1; d2] [d1; d2; d3; d1] = Some 2);
+  assert (A.ld_mismatch deq [d1; d2; d1; d2] [d1; d2; d3; d1] = Some (n 2));
 
   (* ----- op_ledger_mismatch : end-to-end through parse_manifest_impl ----- *)
   let mk_sub d : A.candidate_submission =
-    { A.submission_wire = ""; A.submission_wire_length = 0;
+    { A.submission_wire = ""; A.submission_wire_length = n 0;
       A.submission_digest = d } in
   let m_bytes = A.render_manifest schema_valid in         (* digests [d64 'e'; d64 'f'] *)
   let subs_ok = [mk_sub (d64 'e'); mk_sub (d64 'f')] in
   assert (A.ledger_mismatch_impl deq A.parse_manifest_impl m_bytes subs_ok = None);
   (* reorder the submission list *)
   assert (A.ledger_mismatch_impl deq A.parse_manifest_impl m_bytes
-            [mk_sub (d64 'f'); mk_sub (d64 'e')] = Some 0);
+            [mk_sub (d64 'f'); mk_sub (d64 'e')] = Some (n 0));
   (* drop the last submission -> length divergence at index 1 *)
   assert (A.ledger_mismatch_impl deq A.parse_manifest_impl m_bytes
-            [mk_sub (d64 'e')] = Some 1);
+            [mk_sub (d64 'e')] = Some (n 1));
   (* append an extra submission -> length divergence at index 2 *)
   assert (A.ledger_mismatch_impl deq A.parse_manifest_impl m_bytes
-            (subs_ok @ [mk_sub (d64 'g')]) = Some 2);
+            (subs_ok @ [mk_sub (d64 'g')]) = Some (n 2));
   (* duplicate the first submission -> mismatch at index 1 *)
   assert (A.ledger_mismatch_impl deq A.parse_manifest_impl m_bytes
-            [mk_sub (d64 'e'); mk_sub (d64 'e')] = Some 1);
+            [mk_sub (d64 'e'); mk_sub (d64 'e')] = Some (n 1));
   (* manifest fails to decode -> mismatch at index 0 (no ledger to compare) *)
-  assert (A.ledger_mismatch_impl deq A.parse_manifest_impl "{}" subs_ok = Some 0);
+  assert (A.ledger_mismatch_impl deq A.parse_manifest_impl "{}" subs_ok = Some (n 0));
 
   (* ----- op_manifest_audit_matches (step 5): exact-string identity ----- *)
   let mk_ti ~policy : A.trusted_inputs =
@@ -514,14 +377,14 @@ let () =
    | None -> assert false
    | Some rf ->
        assert (rf.A.rf_identity = rv_ok);
-       assert (List.map (fun e -> e.A.scr_index) rf.A.rf_recorded = [0; 1]);
+       assert (List.map (fun e -> e.A.scr_index) rf.A.rf_recorded = [n 0; n 1]);
        assert (List.map (fun e -> e.A.scr_digest) rf.A.rf_recorded = [d64 'e'; d64 'f']);
        assert (List.map (fun e -> e.A.scr_candidate_id) rf.A.rf_recorded = [None; None]);
        assert (List.map (fun e -> e.A.scr_outcome) rf.A.rf_recorded
                = [A.ScrValidWitness; A.ScrNotAWitness A.InputsEqual]);
        assert (List.map (fun e -> e.A.scr_findings) rf.A.rf_recorded
                = [ []; [ fnd "C1" A.Fail (Some "inputs_equal") None ] ]);
-       assert (rf.A.rf_budget.A.rb_max_candidates = Some 10);
+       assert (rf.A.rf_budget.A.rb_max_candidates = Some (n 10));
        assert (A.parse_record_impl fr = Some rf.A.rf_identity));   (* forward projection *)
   (* the typed finding decoder captures `offending` and enforces the check_id set *)
   (match A.parse_record_full_impl
@@ -549,25 +412,25 @@ let () =
   assert (A.parse_budget_object "{\"max_candidates\":1,\"max_candidates\":2}" = None);
   assert (A.parse_budget_object "{\"max_wobble\":1}" = None);
   (* crosscheck_budget_impl: rec.resource_budget is ADVISORY vs verifier_config *)
-  let cfg_mc n : A.verifier_config = { (cfg (ta [] [])) with A.max_candidates = n } in
+  let cfg_mc value : A.verifier_config = { (cfg (ta [] [])) with A.max_candidates = n value } in
   let b0 = A.empty_budget in
-  assert (A.crosscheck_budget_impl { b0 with A.rb_max_candidates = Some 10 } (cfg_mc 10) = []);
+  assert (A.crosscheck_budget_impl { b0 with A.rb_max_candidates = Some (n 10) } (cfg_mc 10) = []);
   assert (List.exists (fun f -> f.A.finding_outcome = A.Fail)
-            (A.crosscheck_budget_impl { b0 with A.rb_max_candidates = Some 5 } (cfg_mc 10)));
+            (A.crosscheck_budget_impl { b0 with A.rb_max_candidates = Some (n 5) } (cfg_mc 10)));
   assert (List.for_all (fun f -> f.A.finding_outcome = A.NotEvaluated)
-            (A.crosscheck_budget_impl { b0 with A.rb_max_wall_clock_seconds = Some 3 } (cfg_mc 10)));
+            (A.crosscheck_budget_impl { b0 with A.rb_max_wall_clock_seconds = Some (n 3) } (cfg_mc 10)));
   (* crosscheck_impl vs the replay-derived expectation -- crosscheck_impl_nil_iff *)
   let rf_of rs : A.campaign_record_full_view =
     { A.rf_identity = rv_ok; A.rf_recorded = rs; A.rf_budget = b0 } in
   let mm l = List.exists (fun f -> f.A.finding_check_id = "campaign_record_mismatch") l in
   let s1r i sd cid sem v fs : A.stage1_slot =
-    { A.stage1_slot_index = i;
+    { A.stage1_slot_index = n i;
       A.stage1_slot_result = A.Done
-        { A.s1_index = i; A.s1_submission_digest = sd;
+        { A.s1_index = n i; A.s1_submission_digest = sd;
           A.s1_candidate_id = cid; A.s1_semantic_digest = sem;
           A.s1_verdict = v; A.s1_findings = fs } } in
   let scr i sd cid sem oc fs : A.scr_view =
-    { A.scr_index = i; A.scr_digest = sd; A.scr_candidate_id = cid;
+    { A.scr_index = n i; A.scr_digest = sd; A.scr_candidate_id = cid;
       A.scr_semantic = sem; A.scr_outcome = oc; A.scr_findings = fs } in
   (* --- REJECTED (not parsed): candidate_id / semantic = None; a B-finding with `offending` --- *)
   let bf = fnd "B4" A.Fail (Some "input_structure_error") (Some "[3]") in
@@ -610,8 +473,8 @@ let () =
                 [ s1r 0 (d64 'e') None None (A.S1Rejected A.InvalidUtf8) [] ] []));
   (* --- stage-1 NotRun: NO submission_check_result is derived (filtered out); a
          recorded claim for that slot is an extra entry -> mismatch --- *)
-  let s1nr i : A.stage1_slot = { A.stage1_slot_index = i; A.stage1_slot_result = A.NotRun } in
-  let s2nr i : A.stage2_slot = { A.stage2_slot_index = i; A.stage2_slot_result = A.NotRun } in
+  let s1nr i : A.stage1_slot = { A.stage1_slot_index = n i; A.stage1_slot_result = A.NotRun } in
+  let s2nr i : A.stage2_slot = { A.stage2_slot_index = n i; A.stage2_slot_result = A.NotRun } in
   assert (A.derive_expected [ s1nr 0 ] [] = []);
   assert (mm (A.crosscheck_impl
                 (rf_of [ scr 0 (d64 'e') None None A.ScrValidWitness [] ]) [ s1nr 0 ] []));
@@ -620,15 +483,15 @@ let () =
   let pc : A.parsed_candidate = { A.pc_candidate_id = "c-1"; A.candidate_x = []; A.candidate_y = [] } in
   let s1pend i sd sem : A.stage1_slot =
     s1r i sd (Some "c-1") (Some sem)
-      (A.S1Pending { A.pending_index = i; A.pending_submission_digest = sd;
+      (A.S1Pending { A.pending_index = n i; A.pending_submission_digest = sd;
                      A.pending_semantic_digest = sem; A.pending_candidate = pc;
                      A.pending_findings = [] }) [] in
   let s2valid i sd sem : A.stage2_slot =
-    { A.stage2_slot_index = i;
+    { A.stage2_slot_index = n i;
       A.stage2_slot_result = A.Done
-        { A.s2_index = i;
+        { A.s2_index = n i;
           A.s2_verdict = A.ValidWitness
-            { A.witness_index = i; A.witness_submission_digest = sd;
+            { A.witness_index = n i; A.witness_submission_digest = sd;
               A.witness_semantic_digest = sem; A.witness_x = []; A.witness_y = [];
               A.witness_o_x = []; A.witness_o_y = []; A.witness_findings = [] };
           A.s2_findings = [] } } in
@@ -777,6 +640,44 @@ let () =
   assert (A.op_completeness_wellformed_impl (cert "s" "1"));
   assert (not (A.op_completeness_wellformed_impl (cert "" "1")));
   assert (not (A.op_completeness_wellformed_impl (cert "s" "not-json")));
+
+  (* Exact-integer regression: the old parse_nat returned a negative int for
+     max_int+1. These are numeric record/config boundaries, not new parsers. *)
+  let former_max = Big_int_Z.big_int_of_int max_int in
+  let huge = natural (big "100000000000000000000000000000000000000000000000000000000000000000000000000000000") in
+  List.iter (fun value ->
+    let wire_number = Big_int_Z.string_of_big_int value in
+    match A.parse_nat wire_number with
+    | Some (decoded, "") ->
+        assert (Big_int_Z.eq_big_int decoded value);
+        assert (Big_int_Z.string_of_big_int decoded = wire_number)
+    | _ -> assert false)
+    [n 0; former_max; Big_int_Z.succ_big_int former_max; huge];
+  assert (Big_int_Z.eq_big_int (A.add former_max (n 1)) (Big_int_Z.succ_big_int former_max));
+  assert (Big_int_Z.eq_big_int (A.mul huge (n 10)) (Big_int_Z.mult_int_big_int 10 huge));
+  let huge_text = Big_int_Z.string_of_big_int huge in
+  let huge_record = mk_record ~rr:(rr_one ~sd:(d64 'e') ~si:huge_text)
+    ~budget:("{\"max_candidates\":" ^ huge_text ^ "}") in
+  let decoded = match A.parse_record_full_impl huge_record with
+    | Some decoded -> decoded | None -> assert false in
+  assert (decoded.A.rf_budget.A.rb_max_candidates = Some huge);
+  assert ((List.hd decoded.A.rf_recorded).A.scr_index = huge);
+  let large_cfg = { c_real with A.max_candidates = huge; A.max_fuel = huge } in
+  assert (A.crosscheck_budget_impl decoded.A.rf_budget large_cfg = []);
+  assert (A.record_identity_mismatch_impl A.parse_record_impl A.parse_manifest_impl
+    huge_record mc8 sv_bytes' = None);
+  assert (A.signature_valid_impl sha256_hex ed25519_verify ed25519_pubkey_valid
+    large_cfg mc8 sv_bytes');
+  (* The manifest schema itself has no numeric fields: substituting a giant
+     number for its string campaign_id is rejected, not silently coerced. *)
+  assert (A.parse_manifest_impl (repl "\"campaign_id\":\"cmp-1\""
+    ("\"campaign_id\":" ^ huge_text) sv_bytes') = None);
+  assert (A.parse_budget_object "{\"max_candidates\":-1}" = None);
+  assert (A.parse_nat "-1" = None);
+  assert (A.parse_nat "01" = None);
+  let negative_rejected = try ignore (natural (big "-1")); false with Invalid_argument _ -> true in
+  assert negative_rejected;
+  print_endline "PASS: manifest bigint boundary -- max_int+1 and >64-bit decimal round trips, exact arithmetic, huge record indices/budgets and authentication config, malformed/negative nat rejection";
 
   print_endline
     "PASS: manifest authentication -- frozen digest 0714f76c; canonical bytes; \

@@ -1,9 +1,11 @@
 # Implementation status and historical delivery ledger
 
-**Current implementation note (Closure Batch 1, 2026-10-01):** Phase 1 is OPEN.
+**Current implementation note (Closure Batch 2, 2026-10-01):** Phase 1 is OPEN.
 The former admitted obligations are proved; the current build compiles, links
 and executes the extracted outputs against the configured Zarith installation.
-Two extraction paths remain native-integer. `make check` now discovers and
+All required extraction units use bigint mappings. The native mirror is retained
+only as a historical non-normative demo and is excluded from the release path.
+A bounded typed integration harness and finite differential comparator now run. `make check` now discovers and
 fail-closed inspects all substantive theorem-like declarations, retaining legacy
 requests as coverage requirements. `make release` records current counts and
 manifest/build evidence without declaring closure. See [TRUST.md](TRUST.md),
@@ -469,12 +471,9 @@ libraries via `opam var lib` with a `?=` override.
 
 See `PHASE_1_STATUS.md` for the full ledger of the four `PHASE_0_CLOSURE_REPORT.md`
 Phase 1 obligations against current state: obligation 1 done; obligations 2, 3,
-and 4 partial (obligation 3, arbitrary-precision extraction, is partial as of
-`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` -- first unit, `ExtractOrchestration.v`
-+ `ExtractFibreWitnessKernel.v`, reviewer-concurred and promoted, revision 2;
-second unit, `ExtractStage2.v` + its five harnesses, also reviewer-concurred
-and promoted, revision 2; `ExtractManifestAuthentication.v`/`ExtractTranscriptDigest.v`
-still native-int either way -- not complete). **Phase 1 is open;
+and 4 remain partial; Batch 2 completes the remaining extraction conversions
+under the existing trusted bigint strategy and adds bounded executable evidence,
+awaiting review. **Phase 1 is open;
 no obligation has been deferred to a later phase; Phase 1 closure is not
 proposed.**
 
@@ -488,13 +487,8 @@ carries no such index, and single-context is instead
 `ContextResolution.stage1_stage2_use_resolved_context`, a theorem, not a
 dependent `resolved_context` field); physical capture/replay correspondence;
 the general `canonical_value` / remaining `to_cv` encoders (campaign-manifest
-rendering + `digest_v1` are concrete); parser/boundary acceptance; converting
-`ExtractManifestAuthentication.v` and `ExtractTranscriptDigest.v` to
-arbitrary precision (the central `Orchestration`/`FibreWitnessKernel`
-extractions and `ExtractStage2.v` + its five harnesses are all now
-compiled/linked/executed against one, both reviewer-concurred and promoted
--- `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`); the cross-language
-agreement battery. `Stage1Evidence` propagation is **done** as an
+rendering + `digest_v1` are concrete); parser/boundary acceptance; full
+model/witness integration; differential coverage beyond Batch 2’s finite cases. `Stage1Evidence` propagation is **done** as an
 invariant (`Stage1Invariant.pending_invariant`, carried through `run_stage1` /
 `replay`), not runtime-enforced re-checking. `transcript_faithful_for` stays a
 stated F.3 assumption by design.

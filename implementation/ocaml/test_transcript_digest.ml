@@ -9,17 +9,23 @@
    transcripts producing different digests. *)
 
 module S = Extracted_transcript_digest
+let z = Big_int_Z.big_int_of_int
+let natural value =
+  if Big_int_Z.sign_big_int value < 0 then invalid_arg "negative nat fixture";
+  value
+let n value = natural (z value)
+let big = Big_int_Z.big_int_of_string
 
 let sched : S.fuel_schedule =
-  { S.commitment_parse_fuel = 0; S.signature_verify_fuel = 0;
-    S.manifest_bind_fuel = 0; S.record_bind_fuel = 0; S.preflight_fuel = 0;
-    S.stage1_base_fuel = 0; S.stage1_per_byte_fuel = 0 }
+  { S.commitment_parse_fuel = n 0; S.signature_verify_fuel = n 0;
+    S.manifest_bind_fuel = n 0; S.record_bind_fuel = n 0; S.preflight_fuel = n 0;
+    S.stage1_base_fuel = n 0; S.stage1_per_byte_fuel = n 0 }
 
 let ta : S.trust_anchor = { S.ta_authorised_signers = []; S.ta_keys = [] }
 
 let cfg : S.verifier_config =
-  { S.max_candidates = 10; S.max_wire_bytes = 100; S.max_transcript_bytes = 100;
-    S.max_fuel = 1000; S.model_call_fuel = 1; S.max_fuel_per_candidate = 100;
+  { S.max_candidates = n 10; S.max_wire_bytes = n 100; S.max_transcript_bytes = n 100;
+    S.max_fuel = n 1000; S.model_call_fuel = n 1; S.max_fuel_per_candidate = n 100;
     S.schedule = sched; S.config_trust_anchor = ta }
 
 let mc : S.manifest_commitment =
@@ -42,7 +48,7 @@ let ti : S.trusted_inputs =
     S.ti_completeness = S.CompletenessUnknown; S.ti_config = cfg;
     S.ti_policy_document = "pd"; S.ti_policy = "p"; S.ti_policy_digest = "" }
 
-let l0 : S.fuel_ledger = { S.fuel_budget = 1000; S.fuel_consumed = 0 }
+let l0 : S.fuel_ledger = { S.fuel_budget = n 1000; S.fuel_consumed = n 0 }
 
 let never_called _ = failwith "op not expected to be called with 0 submissions"
 
@@ -72,11 +78,11 @@ let vr : S.validation_result = S.ValidCampaign (ac, l0)
 let cb : S.context_bundle = S.CtxNotNeeded
 
 let ev1 : S.exec_event =
-  { S.event_key = { S.key_phase = S.ContextProbe; S.key_role = S.Probe; S.key_repeat = 0 };
-    S.event_input = [1; 2]; S.event_outcome = S.ExecOk [3; 4] }
+  { S.event_key = { S.key_phase = S.ContextProbe; S.key_role = S.Probe; S.key_repeat = n 0 };
+    S.event_input = List.map z [1; 2]; S.event_outcome = S.ExecOk (List.map z [3; 4]) }
 let ev2 : S.exec_event =
-  { S.event_key = { S.key_phase = S.Stage2Phase 0; S.key_role = S.XRole; S.key_repeat = 0 };
-    S.event_input = [5]; S.event_outcome = S.ExecExhausted }
+  { S.event_key = { S.key_phase = S.Stage2Phase (n 0); S.key_role = S.XRole; S.key_repeat = n 0 };
+    S.event_input = List.map z [5]; S.event_outcome = S.ExecExhausted }
 
 let fail msg = Printf.printf "FAIL: %s\n" msg; exit 1
 
@@ -168,7 +174,7 @@ let () =
      digests must differ. *)
   let tr2_reordered = [ev2; ev1] in
   ignore (S.op_transcript_digest ops tr2_reordered : S.digest);
-  let ev1_modified = { ev1 with S.event_input = [1; 3] } in
+  let ev1_modified = { ev1 with S.event_input = List.map z [1; 3] } in
   ignore (S.op_transcript_digest ops [ev1_modified] : S.digest);
 
   print_string
@@ -178,4 +184,31 @@ let () =
      wire digest; malformed evidence carries only the raw-wire digest and is \
      independent of op_transcript_digest; replacing the digest hook changes \
      evidence but leaves the verdict unchanged; no claim of digest \
-     distinctness across different transcripts\n"
+    distinctness across different transcripts\n"
+
+let () =
+  let former_max = Big_int_Z.big_int_of_int max_int in
+  assert (S.charge { S.fuel_budget = former_max; S.fuel_consumed = former_max } (n 1) = None);
+  let huge = natural (big "100000000000000000000000000000000000000000000000000000000000000000000000000000000") in
+  let negative = big "-40000000000000000000000000000000000000001" in
+  assert (Big_int_Z.eq_big_int (S.add former_max (n 1)) (Big_int_Z.succ_big_int former_max));
+  assert (Big_int_Z.eq_big_int (S.mul huge (n 10)) (Big_int_Z.mult_int_big_int 10 huge));
+  let rejected = try ignore (natural negative); false with Invalid_argument _ -> true in
+  assert rejected;
+  let event : S.exec_event =
+    { S.event_key = { S.key_phase = S.Stage2Phase huge; S.key_role = S.XRole; S.key_repeat = huge };
+      S.event_input = [negative; huge]; S.event_outcome = S.ExecOk [negative] } in
+  let seen = ref false in
+  let observer transcript =
+    (* Test-only observation of values at the digest-hook boundary. This is
+       neither a digest algorithm nor canonical transcript encoding. *)
+    assert (transcript = [event]);
+    seen := true; "numeric-fixture" in
+  let large_ops = S.set_transcript_digest ops observer in
+  let large_ti = { ti with S.ti_config = { cfg with S.max_fuel = huge; S.max_candidates = huge } } in
+  let ledger = { S.fuel_budget = huge; S.fuel_consumed = n 0 } in
+  let outcome = S.assess_validated large_ops large_ti (S.ValidCampaign (ac, ledger))
+    (S.LiveTranscript ([event], cb)) in
+  assert !seen;
+  assert (S.typed_digest_of (S.outcome_transcript_evidence outcome) = Some "numeric-fixture");
+  print_endline "PASS: transcript bigint boundary -- overflow charge rejects; arithmetic, signed coordinates and huge event indices/repeats reach the abstract hook unchanged; negative-to-nat fixture conversion rejects"

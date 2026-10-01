@@ -1,4 +1,4 @@
-.PHONY: check rocq ocaml check-kernel-trust check-source-trust assumptions test clean gate-tests release
+.PHONY: check rocq ocaml check-kernel-trust check-source-trust assumptions test clean gate-tests release integer-audit differential
 
 # Keep inspection after compilation, including when the caller uses make -j.
 .NOTPARALLEL:
@@ -11,7 +11,7 @@ ZARITH ?= $(OCAML_LIB)/zarith
 SHALIB ?= $(OCAML_LIB)/sha
 export OCAML_LIB ZARITH SHALIB
 
-check: check-source-trust rocq ocaml assumptions test
+check: check-source-trust rocq ocaml assumptions test integer-audit differential
 
 rocq:
 	coqc -Q rocq PCFW rocq/FibreWitnessKernel.v
@@ -39,26 +39,25 @@ rocq:
 	coqc -Q rocq PCFW rocq/ExtractStage2.v
 	coqc -Q rocq PCFW rocq/ExtractManifestAuthentication.v
 	coqc -Q rocq PCFW rocq/ExtractTranscriptDigest.v
+	coqc -Q rocq PCFW rocq/ExtractPhase1Integration.v
 	coqchk -Q rocq PCFW PCFW.FibreWitnessKernel PCFW.Orchestration \
 	  PCFW.Stage2 PCFW.Stage2Adapter PCFW.Stage1 PCFW.Stage1Invariant PCFW.Stage1Wrapper PCFW.ContextResolution PCFW.PipelineWiring PCFW.ValidationBinding PCFW.CanonicalV1 PCFW.ManifestMatching PCFW.ManifestAuthentication PCFW.ManifestLedger PCFW.ManifestAudit PCFW.CampaignRecord PCFW.RecordCrosscheck PCFW.CompletenessWellformed PCFW.TranscriptDigest PCFW.ManifestPipeline
 
 assumptions: check-source-trust rocq
 	python3 scripts/audit.py assumptions
 
-ocaml:
-	ocamlc -I ocaml -c ocaml/orchestration.mli
-	ocamlc -I ocaml -c ocaml/orchestration.ml
+ocaml: rocq
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_orchestration.mli
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_orchestration.ml
 
 test: ocaml rocq
 	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_fibre_witness_kernel.mli
 	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_fibre_witness_kernel.ml
 	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_fibre_witness_kernel.cmo ocaml/test_fibre_witness_kernel_bigint.ml -o ocaml/test_fibre_witness_kernel_bigint
 	./ocaml/test_fibre_witness_kernel_bigint
-	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_orchestration.mli
-	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_orchestration.ml
 	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_orchestration.cmo ocaml/test_orchestration_bigint.ml -o ocaml/test_orchestration_bigint
 	./ocaml/test_orchestration_bigint
-	ocamlc -I ocaml ocaml/orchestration.cmo ocaml/test_context_bundle.ml -o ocaml/test_context_bundle
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_orchestration.cmo ocaml/test_context_bundle.ml -o ocaml/test_context_bundle
 	./ocaml/test_context_bundle
 	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_stage2.mli
 	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_stage2.ml
@@ -72,14 +71,27 @@ test: ocaml rocq
 	./ocaml/test_context_resolution
 	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_stage2.cmo ocaml/test_manifest_matching.ml -o ocaml/test_manifest_matching
 	./ocaml/test_manifest_matching
-	ocamlc -I ocaml -c ocaml/extracted_transcript_digest.mli
-	ocamlc -I ocaml -c ocaml/extracted_transcript_digest.ml
-	ocamlc -I ocaml ocaml/extracted_transcript_digest.cmo ocaml/test_transcript_digest.ml -o ocaml/test_transcript_digest
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_transcript_digest.mli
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_transcript_digest.ml
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_transcript_digest.cmo ocaml/test_transcript_digest.ml -o ocaml/test_transcript_digest
 	./ocaml/test_transcript_digest
-	ocamlc -I ocaml -c ocaml/extracted_manifest_auth.mli
-	ocamlc -I ocaml -c ocaml/extracted_manifest_auth.ml
-	ocamlc -custom -I ocaml -I $(ZARITH) -I $(SHALIB) $(ZARITH)/zarith.cma $(SHALIB)/sha.cma -cclib -lsha_stubs -cclib -L$(SHALIB) ocaml/extracted_manifest_auth.cmo ocaml/test_manifest_authentication.ml -o ocaml/test_manifest_authentication
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_manifest_auth.mli
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_manifest_auth.ml
+	ocamlc -I ocaml -I $(ZARITH) -I $(SHALIB) -c ocaml/manifest_crypto_fixture.ml
+	ocamlc -custom -I ocaml -I $(ZARITH) -I $(SHALIB) $(ZARITH)/zarith.cma $(SHALIB)/sha.cma -cclib -lsha_stubs -cclib -L$(SHALIB) ocaml/manifest_crypto_fixture.cmo ocaml/extracted_manifest_auth.cmo ocaml/test_manifest_authentication.ml -o ocaml/test_manifest_authentication
 	./ocaml/test_manifest_authentication
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_phase1_integration.mli
+	ocamlc -I ocaml -I $(ZARITH) -c ocaml/extracted_phase1_integration.ml
+	ocamlc -custom -I ocaml -I $(ZARITH) -I $(SHALIB) $(ZARITH)/zarith.cma $(SHALIB)/sha.cma -cclib -lsha_stubs -cclib -L$(SHALIB) ocaml/manifest_crypto_fixture.cmo ocaml/extracted_phase1_integration.cmo ocaml/test_phase1_integration.ml -o ocaml/test_phase1_integration
+	./ocaml/test_phase1_integration
+	ocamlc -custom -I ocaml -I $(ZARITH) $(ZARITH)/zarith.cma ocaml/extracted_phase1_integration.cmo ocaml/extracted_stage2.cmo ocaml/extracted_transcript_digest.cmo ocaml/extracted_manifest_auth.cmo ocaml/test_integer_differential.ml -o ocaml/test_integer_differential
+	./ocaml/test_integer_differential
+
+integer-audit: test
+	python3 scripts/integer_surface.py
+
+differential: test
+	python3 scripts/differential.py
 
 check-kernel-trust: check-source-trust
 
@@ -101,4 +113,5 @@ clean:
 	rm -f ocaml/extracted_manifest_auth.ml ocaml/extracted_manifest_auth.mli
 	rm -f ocaml/extracted_orchestration.ml ocaml/extracted_orchestration.mli
 	rm -f ocaml/extracted_fibre_witness_kernel.ml ocaml/extracted_fibre_witness_kernel.mli
+	rm -f ocaml/extracted_phase1_integration.ml ocaml/extracted_phase1_integration.mli ocaml/test_phase1_integration ocaml/test_integer_differential
 	rm -f .lia.cache

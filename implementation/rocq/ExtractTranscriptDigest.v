@@ -5,9 +5,10 @@
    naming of -- the unrelated `FibreWitnessKernel.Policy` record already
    extracted there.
 
-   nat and Z extract to OCaml [int], matching every other test-harness-only
-   extraction in this project (NOT the exact-integer verifier). *)
-From Coq Require Import Extraction ExtrOcamlBasic ExtrOcamlNatInt ExtrOcamlZInt
+   nat and Z use the kernel's Zarith mappings. The digest hook remains abstract;
+   bigint input preservation is not a concrete transcript digest or faithfulness
+   implementation. *)
+From Coq Require Import Extraction ExtrOcamlBasic ExtrOcamlNatBigInt ExtrOcamlZBigInt
   ExtrOcamlNativeString.
 From PCFW Require Import Orchestration TranscriptDigest.
 

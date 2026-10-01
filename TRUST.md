@@ -1,7 +1,7 @@
 # Current Phase-1 trust account
 
 Phase 1 is **OPEN**. This document describes implementation evidence as of
-Closure Batch 1 (2026-10-01). [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) remains the
+Closure Batch 2 (2026-10-01). [TRUST_BOUNDARY.md](TRUST_BOUNDARY.md) remains the
 normative trust specification; descriptions there of capture and the intended
 compiled-execution assurance strategy are not evidence that those mechanisms
 have been completed. [PHASE_1_STATUS.md](PHASE_1_STATUS.md) records open work.
@@ -9,7 +9,7 @@ have been completed. [PHASE_1_STATUS.md](PHASE_1_STATUS.md) records open work.
 ## Kernel checks and release surface
 
 `make check` compiles the modules listed in `implementation/_CoqProject`,
-regenerates the five extractions, and explicitly runs `coqchk` on all substantive
+regenerates the six extractions, and explicitly runs `coqchk` on all substantive
 modules. Extraction drivers are compiled but are not explicit `coqchk` targets.
 
 The assumption release surface includes **every Theorem, Lemma, Corollary,
@@ -53,21 +53,48 @@ hypotheses for an executable assessment. Important remaining premises include:
 
 `policy_payload_digest_injective` is a formal premise in the manifest binding
 results. It must not be described as a proved property of SHA-256 or inferred
-from collision resistance. Batch 1 does not change that premise.
+from collision resistance. Closure Batches 1–2 do not change that premise.
 
 ## Extraction, implementation and compiler trust
 
-Kernel, orchestration and Stage-1/Stage-2 extractions use arbitrary-precision
-Zarith representations. Manifest/authentication naturals and the transcript
-extraction's integers/naturals remain native OCaml integers. The native
-`ocaml/orchestration.ml` mirror also uses machine integers. These paths do not
-silently inherit exact arithmetic correspondence.
+All current extraction units use `ExtrOcamlNatBigInt` and `ExtrOcamlZBigInt`,
+with the kernel's Zarith `Big_int_Z.big_int` representation: kernel,
+orchestration, Stage-1/Stage-2, manifest/authentication, transcript-digest, and
+one shared closure for the existing Phase-1 pipeline builder. The structural
+OCaml AST gate rejects native `int` types in regenerated interfaces. Counts,
+roots and numeric signature fields are generated in
+`implementation/release-audit/integer-correspondence.json`.
 
-The existing harnesses compile and execute all five extraction outputs and the
-native mirror. Their passing cases are test evidence. There is no established
-general Rocq/OCaml correspondence theorem for the native mirror or integrated
-full-pipeline differential battery. Extraction mappings, Coq extraction, OCaml
-compilation/linking, Zarith/C bindings and build tools remain trusted.
+Exactness is conditional on the Rocq domains: extracted `nat` values must be
+nonnegative, and `positive` values positive. Raw `Big_int_Z` types do not enforce
+these refinements. Fixture input conversions reject negative naturals; the
+existing decimal record decoder rejects negative syntax. Arbitrary callers must
+preserve these invariants. There is no production parser/domain-validation claim.
+No fixed-width truncation is used for semantic counters, budgets, indices or
+coordinates. Resource exhaustion remains possible; bigint does not promise
+unlimited memory or stack.
+
+The historical `ocaml/orchestration.ml` mirror retains native integers and reduced
+records, without a correspondence proof. It is explicitly non-normative and is
+excluded from compilation/linking by the release gate. The context regression
+now uses extraction. Host byte/bit/string/list utilities still use bounded native
+integers, including the unchanged test crypto fixture; they do not implement
+unbounded semantic counters.
+
+The finite differential battery compares small actual Gallina functions and
+signed `Z` values, plus labelled exact `Z` reference cases for enormous natural
+arithmetic/decimal values. Those reference cases do not evaluate the full
+Gallina unary-natural parser or fuel function at enormous magnitudes. Passing
+differential tests demonstrate agreement on those cases. They are not a general
+correspondence theorem. The integrated harness exercises an empty typed campaign,
+real existing authentication, record checks, exact fuel and an abstract digest
+observer. Model, candidate-parser, context and capture hooks must remain unused;
+a full model/witness pipeline is still outstanding.
+
+Extraction mappings, Coq extraction, OCaml compilation/linking, Zarith/C bindings
+and build tools remain trusted. See
+[PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md](PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md)
+for the reproduced former overflow failures and exact test boundaries.
 
 ## Parser, I/O, transcript and cryptographic trust
 
@@ -80,9 +107,9 @@ loader premise rather than the current typed record decoder.
 The transcript-digest harness uses an explicitly colliding deterministic mock;
 the normative canonicaliser/SHA-256 transcript realisation remains abstract.
 Digest determinism proves neither collision resistance nor authentication.
-The manifest harness links the `sha` library and a harness-local OCaml Ed25519
+The manifest harness links the `sha` library and a shared test-fixture OCaml Ed25519
 implementation. Frozen/RFC vectors and rejection tests do not prove those
-implementations secure. No cryptographic component is changed in Batch 1.
+implementations secure. Batch 2 moves the existing fixture unchanged; no cryptographic algorithm changes.
 
 Filesystem retrieval, OS/runtime behaviour, runner behaviour and signing-key
 custody remain environmental trust. The source manifest detects changes relative

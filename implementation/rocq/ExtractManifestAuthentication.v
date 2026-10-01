@@ -8,8 +8,10 @@
    checks them against the frozen campaign-manifest digest vector and an official
    Ed25519 test vector.
 
-   Strings extract natively; there is no bignum dependency in this file. *)
-From Coq Require Import Extraction ExtrOcamlBasic ExtrOcamlNatInt
+   Z, positive, N and nat use the same Zarith representation as the kernel.
+   In particular decimal record indices/budgets must not wrap at max_int.
+   Strings remain native; this output now requires Zarith. *)
+From Coq Require Import Extraction ExtrOcamlBasic ExtrOcamlNatBigInt ExtrOcamlZBigInt
   ExtrOcamlNativeString.
 From PCFW Require Import CanonicalV1 ManifestAuthentication ManifestLedger
   ManifestAudit CampaignRecord RecordCrosscheck CompletenessWellformed.

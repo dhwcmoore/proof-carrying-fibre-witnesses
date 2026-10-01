@@ -14,6 +14,13 @@ working-tree evidence and keeps Phase 1 **OPEN / NOT YET CLOSED**. See
 [TRUST.md](TRUST.md) and [RELEASE_CRITERIA.md](RELEASE_CRITERIA.md). This update
 is not a new reviewer concurrence or closure disposition.
 
+**Closure Batch 2 evidence update (2026-10-01):** all required extractions now use
+bigint mappings, the native orchestration mirror is excluded from the release
+path, and structural checks, a finite differential battery and an empty typed
+campaign integration harness pass. This is new machine evidence awaiting review,
+not reviewer concurrence or a Phase-1 closure disposition. See
+[PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md](PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md).
+
 This ledger is author-prepared status. Every "done" row is source-reviewed by
 the designated reviewer and machine-checked on the implementation machine
 (`coqc` / `ocamlc` 8.18.0 / 4.14.1); the reviewer's environment lacks the
@@ -117,7 +124,12 @@ execution faithfulness.
 > Complete extracted-OCaml compilation, linking and execution with the required
 > arbitrary-precision library.
 
-**PARTIAL** -- **reviewer-concurred by source inspection and promoted**
+**Current Batch-2 evidence:** all required extractions compile, link and execute
+with the existing arbitrary-precision mappings. The source/domain and bounded
+test limitations are recorded in the Batch-2 report; full executable acceptance
+and Phase 1 remain open. The following two-unit concurrence account is historical.
+
+**Historical PARTIAL disposition** -- **reviewer-concurred by source inspection and promoted**
 (revision 1 HELD -- untested candidate-coordinate passage plus two misleading
 scope claims; **revision 2**, ZIP sha256
 `49fa79e16aa44b79c148ae10c78fb5750c5a6878d0b63b94c3de9def1cfe03c8`). Not a
@@ -159,18 +171,13 @@ addresses all three and is **reviewer-concurred and promoted**. See
 including the one file (`test_manifest_matching.ml`) where no beyond-63-bit
 case was added, and why.
 
-**Residual, explicit, after both units**: `ExtractManifestAuthentication.v`
-and `ExtractTranscriptDigest.v`, which carry the bulk of this project's
-remaining harness coverage (the manifest/ledger/audit/record/crosscheck
-suite, the Ed25519 signature path, the transcript-digest evidence suite),
-remain native-`int`-only and unaffected -- there is still no single build
-running the whole validation pipeline under arbitrary precision. The
-"verifying environment's `zarith` ships no `.cmi` files" claim above did not
-hold for the zarith install this Makefile's own `OCAML_LIB`/`ZARITH`
-variables resolve to on the build environment used for this revision (see
-`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md` §2 for exactly what was checked
-and how); this is reported as an observation about that environment, not a
-general claim about the reviewer's. See `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`.
+**Current residual after Batch 2:** the two remaining extraction drivers have
+been converted to bigint, with former overflow reproduced and regressions added.
+The new common extraction tests existing authentication/record checks and the
+abstract digest on an empty typed campaign. Full model/witness integration,
+concrete digest/capture/parser boundaries and general correspondence are still
+open. The earlier library-interface limitation does not apply to the configured
+Zarith installation used for these builds.
 
 ## Closure-report obligation 4 -- implementation acceptance checks
 
@@ -186,7 +193,7 @@ general claim about the reviewer's. See `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.
 | boundary conditions (stage 2) | `adapter_candidate_wf` / `transcript_stage2_wf` formalised; `adapter_candidate_wf` discharged from stage 1 -- **proved** |
 | capture / replay correspondence | **OPEN** -- `capture` is not modelled; `replay`'s dependence on `op_stage2_check` is localised (`replay_op_stage2_local`) but no `capture` <-> `replay` theorem |
 | canonical encoding | **PARTIAL** -- `CanonicalV1.render_manifest` (`canonicalise_v1 ∘ to_cv` for the campaign-manifest schema, `render_manifest_frozen_vector` = the §2.2.5 payload byte-for-byte) and `digest_v1` / `campaign_manifest_digest` are concrete; the general `canonical_value` tree + the remaining `to_cv` rows are open |
-| cross-language agreement battery | **OPEN** -- OCaml `orchestration.ml` mirror compiles but no Rocq <-> OCaml equivalence; the `Stage*` extractions have OCaml harness tests but no cross-language correspondence proof |
+| cross-language agreement battery | **PARTIAL, Batch-2 evidence** -- finite actual Gallina and labelled exact `Z` reference comparisons pass; the mirror is non-normative and excluded. No general Rocq/OCaml correspondence theorem; coverage is bounded as described in the Batch-2 report |
 
 ## O1/O2/O3 functions + shared-`C` wiring -- reviewer source review PASSED
 
@@ -302,12 +309,9 @@ r3) an explicit contract-bound primitive treatment. Still open, all separate fro
 decoders; a maintained Ed25519; `transcript_stage2_wf` from a modelled
 `parse_transcript` / `capture`; explicit accounting for unresolved transcript
 faithfulness (not established by modelling capture); `transcript_digest_v1`'s
-concrete canonicaliser + SHA-256 realisation; converting the remaining two
-native-int extractions (`ExtractManifestAuthentication.v`,
-`ExtractTranscriptDigest.v`) to arbitrary precision (obligation 3 is
-PARTIAL, not complete -- see above and
-`PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`); capture/replay correspondence;
-canonical encoding; cross-language battery; and the final Phase 1 closure
+concrete canonicaliser + SHA-256 realisation; full model/witness integration;
+capture/replay correspondence; canonical encoding; differential coverage beyond
+the bounded Batch-2 cases; and the final Phase 1 closure
 review.
 
 **Phase 1 closure is not appropriate now** and is not proposed.

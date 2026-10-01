@@ -127,11 +127,14 @@ errors, missing inspections and global axioms fail the build. The old unchecked
 [RELEASE_CRITERIA.md](../RELEASE_CRITERIA.md). `make gate-tests` exercises the
 new gates using temporary fixtures.
 
-The current build compiles, links and executes all five extraction outputs.
+The current build compiles, links and executes all current extraction outputs.
 Zarith development interfaces are available in the build environment used for
-the current baseline. Two extraction paths still use native integers; neither
-general executable correspondence nor an integrated exact-integer pipeline is
-established by these harnesses.
+the current baseline. All extracted semantic integer types now use the kernel’s bigint mappings.
+The native orchestration mirror is excluded from required execution. A structural
+AST audit, finite Rocq/OCaml comparator and empty typed campaign integration test
+run with `make check`; their boundaries are in
+[the Batch-2 report](../PHASE_1_EXACT_INTEGER_CORRESPONDENCE.md). They do not
+establish general executable equivalence or full model/witness integration.
 
 ### Historical initial build repairs
 
@@ -234,8 +237,8 @@ Every named `primitive_ops` member now has either a concrete implementation
 or an explicit, contract-bound primitive treatment. Phase 1 remains open
 regardless -- `parse_transcript` / capture well-formedness,
 `transcript_stage2_wf`, digest-function correctness, artefact binding to the
-committed model/inference spec, converting the remaining extractions to
-arbitrary precision (partial -- see `PHASE_1_ARBITRARY_PRECISION_EXTRACTION.md`),
+committed model/inference spec, full model/witness integration beyond the
+Batch-2 empty typed campaign test,
 and the final closure review are all separate, still-open obligations. See
 `PHASE_1_STATUS.md` for exact, current status.
 

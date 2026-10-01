@@ -3,11 +3,8 @@
 
    Closure-report obligation 3 (arbitrary-precision extracted OCaml): Z and
    nat extract to Big_int_Z.big_int (Zarith's arbitrary-precision
-   representation), NOT OCaml's native, fixed-width [int] -- unlike this
-   file's own prior revisions (see git history) and unlike the two
-   extractions that remain native-int, ExtractManifestAuthentication.v and
-   ExtractTranscriptDigest.v. string still extracts to OCaml [string]
-   (ExtrOcamlNativeString, unchanged).
+   representation), NOT OCaml's native, fixed-width [int] -- the same mapping now used by all current extraction units.
+   Strings still extract to OCaml [string] (ExtrOcamlNativeString).
 
    Genuinely compiled, linked (against zarith) and EXECUTED by
    test_stage2.ml, test_stage1.ml, test_stage1_wrapper.ml,
